@@ -60,6 +60,13 @@ class Post(models.Model):
     def get_absolute_url(self):
         return reverse("blog:post_detail", kwargs={"slug": self.slug})
 
+    def is_public(self):
+        return (
+            self.status == self.Status.PUBLISHED
+            and self.published_at is not None
+            and self.published_at <= timezone.now()
+        )
+
     def save(self, *args, **kwargs):
         if self.status == self.Status.PUBLISHED and self.published_at is None:
             self.published_at = timezone.now()

@@ -6,6 +6,7 @@ A small Django blog project with PostgreSQL, MinIO-compatible media storage, a s
 
 - Blog posts with title, slug, excerpt, WYSIWYG-editable content, cover image, status, publish date, and author.
 - Public post list and post detail pages.
+- Permission-protected public post creation and editing screens, separate from Django admin.
 - Public login page using Django's native authentication views.
 - Public registration page with a custom signup form and automatic login after account creation.
 - Public comment form on post detail pages.
@@ -100,7 +101,19 @@ Tailwind CSS is loaded from the CDN in `templates/base.html`. There is no Node.j
 
 The public interface uses a blog-first editorial design system defined through the Tailwind CDN configuration in `templates/base.html`. Its visual direction is inspired by `https://guikastner.github.io/web/`: premium blue accents, a light grid-backed background, pill navigation, rounded article cards, and the Space Grotesk / Source Serif 4 font pairing. It keeps the post list chronological and constrains article detail text to a readable measure, while preserving visible focus states, accessible form labels and errors, and touch-friendly buttons/links without adding a frontend build pipeline.
 
-The public navigation uses inline SVG icons, so it does not require an icon package or build step. Editorial actions are shown with Django's native template permission checks: users with `blog.add_post` can open the admin post creation form, users with `blog.change_post` can edit the current post from its detail page, and staff users can access the admin index.
+The public navigation uses inline SVG icons, so it does not require an icon package or build step. Editorial actions are shown with Django's native template permission checks: users with `blog.add_post` can open the public post creation screen, users with `blog.change_post` can edit the current post from its detail page, and staff users can access the admin index.
+
+## Editorial Editor
+
+Post creation and post editing use the blog's own public editor at `/posts/new/` and `/posts/<slug>/edit/`. These screens use Django class-based views and native permissions: `blog.add_post` for creating posts and `blog.change_post` for editing posts.
+
+The content editor is a local WYSIWYG control backed by the `Post.content` field. It supports formatted text, links, HTML mode, uploaded images, and pasted image media. Editor media is saved through Django's configured default storage under:
+
+```text
+posts/content/YYYY/MM/
+```
+
+The media upload endpoint uses the same type and size validation configured for blog images and works with local media storage or the configured MinIO-compatible storage.
 
 ## Authentication
 
