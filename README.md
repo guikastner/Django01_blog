@@ -96,7 +96,7 @@ Allowed cover image extensions are JPG, JPEG, PNG, and WebP. The default maximum
 
 Tailwind CSS is loaded from the CDN in `templates/base.html`. There is no Node.js build step.
 
-The public interface uses a content-first editorial design system defined through the Tailwind CDN configuration in `templates/base.html`. It keeps semantic color tokens, readable article widths, visible focus states, accessible form labels and errors, and touch-friendly buttons/links without adding a frontend build pipeline.
+The public interface uses a blog-first editorial design system defined through the Tailwind CDN configuration in `templates/base.html`. Its visual direction is inspired by `https://guikastner.github.io/web/`: premium blue accents, a light grid-backed background, pill navigation, rounded article cards, and the Space Grotesk / Source Serif 4 font pairing. It keeps the post list chronological and constrains article detail text to a readable measure, while preserving visible focus states, accessible form labels and errors, and touch-friendly buttons/links without adding a frontend build pipeline.
 
 ## Tests
 
