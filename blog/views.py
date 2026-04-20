@@ -59,6 +59,7 @@ class PostFormMixin(LoginRequiredMixin, PermissionRequiredMixin):
     template_name = "blog/post_form.html"
     slug_field = "slug"
     slug_url_kwarg = "slug"
+    submit_icon = "save-post"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -69,6 +70,7 @@ class PostFormMixin(LoginRequiredMixin, PermissionRequiredMixin):
         context = super().get_context_data(**kwargs)
         context["form_title"] = self.form_title
         context["submit_label"] = self.submit_label
+        context["submit_icon"] = self.submit_icon
         context["can_view_post"] = bool(getattr(self, "object", None) and self.object.is_public())
         return context
 
@@ -94,7 +96,8 @@ class PostCreateView(PostFormMixin, CreateView):
 class PostUpdateView(PostFormMixin, UpdateView):
     permission_required = "blog.change_post"
     form_title = "Edit post"
-    submit_label = "Save post"
+    submit_label = "Update post"
+    submit_icon = "update-post"
 
     def get_queryset(self):
         return Post.objects.select_related("author")
