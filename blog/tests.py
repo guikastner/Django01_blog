@@ -2,6 +2,7 @@ import shutil
 import tempfile
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.contrib.admin.sites import AdminSite
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -11,8 +12,8 @@ from django.utils import timezone
 
 from comments.models import Comment
 
-from .models import Post
-from .admin import PostAdmin
+from .models import Category, Post
+from .admin import CategoryAdmin, PostAdmin
 
 
 class PostModelTests(TestCase):
@@ -49,9 +50,23 @@ class PostModelTests(TestCase):
         self.assertIsNotNone(post.published_at)
 
 
+class CategoryModelTests(TestCase):
+    def test_str_returns_name(self):
+        category = Category.objects.create(name="Django", slug="django")
+
+        self.assertEqual(str(category), "Django")
+
+    def test_get_absolute_url_uses_category_slug(self):
+        category = Category.objects.create(name="Django", slug="django")
+
+        self.assertEqual(category.get_absolute_url(), reverse("blog:category_post_list", kwargs={"category_slug": "django"}))
+
+
 class PostViewTests(TestCase):
     def setUp(self):
         self.author = get_user_model().objects.create_user(username="editor", password="password")
+        self.category = Category.objects.create(name="Django", slug="django")
+        self.other_category = Category.objects.create(name="Operations", slug="operations")
         self.published = Post.objects.create(
             title="Published",
             slug="published",
@@ -60,19 +75,44 @@ class PostViewTests(TestCase):
             status=Post.Status.PUBLISHED,
             published_at=timezone.now(),
         )
+        self.published.categories.add(self.category)
         self.draft = Post.objects.create(title="Draft", slug="draft", content="Draft body", author=self.author)
+        self.draft.categories.add(self.other_category)
+
+    def post_permission(self, codename):
+        return Permission.objects.get(content_type__app_label="blog", codename=codename)
 
     def test_post_list_shows_only_published_posts(self):
         response = self.client.get(reverse("blog:post_list"))
 
         self.assertContains(response, self.published.title)
+        self.assertContains(response, self.category.name)
         self.assertNotContains(response, self.draft.title)
+        self.assertNotContains(response, self.other_category.name)
+
+    def test_category_post_list_shows_only_posts_in_category(self):
+        other_published = Post.objects.create(
+            title="Other published",
+            slug="other-published",
+            content="Body",
+            author=self.author,
+            status=Post.Status.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        other_published.categories.add(self.other_category)
+
+        response = self.client.get(self.category.get_absolute_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.published.title)
+        self.assertNotContains(response, other_published.title)
 
     def test_post_detail_shows_published_post(self):
         response = self.client.get(self.published.get_absolute_url())
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.published.title)
+        self.assertContains(response, self.category.name)
 
     def test_post_detail_does_not_show_draft(self):
         response = self.client.get(self.draft.get_absolute_url())
@@ -111,11 +151,92 @@ class PostViewTests(TestCase):
         self.assertContains(response, "Visible comment.")
         self.assertNotContains(response, "Hidden comment.")
 
+    def test_edit_buttons_are_hidden_without_post_permissions(self):
+        response = self.client.get(self.published.get_absolute_url())
+
+        self.assertNotContains(response, reverse("blog:post_update", kwargs={"slug": self.published.slug}))
+        self.assertNotContains(response, reverse("blog:post_create"))
+
+    def test_edit_buttons_are_visible_with_post_permissions(self):
+        self.author.user_permissions.add(
+            self.post_permission("add_post"),
+            self.post_permission("change_post"),
+        )
+        self.client.force_login(self.author)
+
+        list_response = self.client.get(reverse("blog:post_list"))
+        detail_response = self.client.get(self.published.get_absolute_url())
+
+        self.assertContains(list_response, reverse("blog:post_create"))
+        self.assertContains(list_response, reverse("blog:post_update", kwargs={"slug": self.published.slug}))
+        self.assertContains(detail_response, reverse("blog:post_update", kwargs={"slug": self.published.slug}))
+
+    def test_anonymous_user_cannot_open_post_create_page(self):
+        response = self.client.get(reverse("blog:post_create"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/admin/login/", response["Location"])
+
+    def test_authenticated_user_without_permission_cannot_open_post_create_page(self):
+        self.client.force_login(self.author)
+
+        response = self.client.get(reverse("blog:post_create"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_user_with_add_permission_can_create_post(self):
+        self.author.user_permissions.add(self.post_permission("add_post"))
+        self.client.force_login(self.author)
+
+        response = self.client.post(
+            reverse("blog:post_create"),
+            {
+                "title": "Editor post",
+                "slug": "editor-post",
+                "excerpt": "Short summary",
+                "content": "<p>Editor body</p>",
+                "status": Post.Status.DRAFT,
+                "published_at": "",
+                "categories": [self.category.pk],
+            },
+        )
+
+        post = Post.objects.get(slug="editor-post")
+        self.assertRedirects(response, reverse("blog:post_list"))
+        self.assertEqual(post.author, self.author)
+        self.assertEqual(post.categories.get(), self.category)
+
+    def test_user_with_change_permission_can_edit_post(self):
+        self.author.user_permissions.add(self.post_permission("change_post"))
+        self.client.force_login(self.author)
+
+        response = self.client.post(
+            reverse("blog:post_update", kwargs={"slug": self.published.slug}),
+            {
+                "title": "Updated title",
+                "slug": self.published.slug,
+                "excerpt": self.published.excerpt,
+                "content": "<p>Updated body</p>",
+                "status": Post.Status.PUBLISHED,
+                "published_at": self.published.published_at.strftime("%Y-%m-%dT%H:%M"),
+                "categories": [self.category.pk],
+            },
+        )
+
+        self.published.refresh_from_db()
+        self.assertRedirects(response, self.published.get_absolute_url())
+        self.assertEqual(self.published.title, "Updated title")
+        self.assertEqual(self.published.content, "<p>Updated body</p>")
+
 
 class PostAdminTests(TestCase):
     def setUp(self):
         self.author = get_user_model().objects.create_user(username="editor", password="password")
         self.post_admin = PostAdmin(Post, AdminSite())
+        self.category_admin = CategoryAdmin(Category, AdminSite())
+
+    def test_category_admin_prepopulates_slug_from_name(self):
+        self.assertEqual(self.category_admin.prepopulated_fields, {"slug": ("name",)})
 
     def test_view_on_site_is_hidden_for_drafts(self):
         post = Post.objects.create(title="Draft", slug="draft", content="Body", author=self.author)

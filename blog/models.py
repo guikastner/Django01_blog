@@ -24,6 +24,27 @@ class PublishedPostManager(models.Manager):
         )
 
 
+class Category(models.Model):
+    name = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "categories"
+        indexes = [
+            models.Index(fields=["slug"]),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("blog:category_post_list", kwargs={"category_slug": self.slug})
+
+
 class Post(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
@@ -38,6 +59,7 @@ class Post(models.Model):
         blank=True,
         validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"]), validate_cover_image],
     )
+    categories = models.ManyToManyField(Category, blank=True, related_name="posts")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

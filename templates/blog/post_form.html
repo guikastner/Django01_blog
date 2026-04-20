@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Edit {{ object.title }}{% else %}Create post{% endif %} - Django Blog{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'blog/admin_wysiwyg.css' %}">
+  <script src="{% static 'blog/admin_wysiwyg.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+  <section class="mx-auto max-w-[72rem] rounded-[2rem] border border-line bg-white/90 p-6 shadow-[0_20px_60px_rgba(10,53,116,0.10)] backdrop-blur sm:p-10">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-deep">Editorial desk</p>
+        <h1 class="max-w-[14ch] font-serif text-[clamp(2.75rem,8vw,5.2rem)] font-semibold leading-[0.98] text-ink">
+          {% if object %}Edit post.{% else %}Create a new post.{% endif %}
+        </h1>
+        <p class="mt-6 max-w-[62ch] text-lg leading-8 text-muted">
+          Draft, revise, and publish articles using the same visual system readers see across the blog.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <a href="{% url 'blog:post_list' %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-5 text-sm font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Back to posts</a>
+        {% if object_is_public %}
+          <a href="{{ object.get_absolute_url }}" class="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">View post</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto mt-10 grid max-w-[72rem] gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+    <section>
+      <form method="post" enctype="multipart/form-data" class="space-y-6 rounded-[1.75rem] border border-line bg-white/92 p-5 shadow-[0_16px_45px_rgba(10,53,116,0.08)] backdrop-blur sm:p-7">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="rounded-[1.25rem] border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-800" role="alert">{{ form.non_field_errors|striptags }}</div>
+        {% endif %}
+
+        {% for field in form %}
+          <div>
+            <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-ink">{{ field.label }}</label>
+            {% if field.help_text %}
+              <p class="mt-1 text-sm leading-6 text-muted">{{ field.help_text }}</p>
+            {% endif %}
+            {{ field }}
+            {% if field.errors %}
+              <p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ field.errors|striptags }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        <div class="flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center">
+          <button type="submit" class="inline-flex min-h-[3.25rem] items-center justify-center rounded-full bg-accent px-6 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Save post</button>
+          <a href="{% if object_is_public %}{{ object.get_absolute_url }}{% else %}{% url 'blog:post_list' %}{% endif %}" class="inline-flex min-h-[3.25rem] items-center justify-center rounded-full border border-line bg-white px-6 text-sm font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Cancel</a>
+        </div>
+      </form>
+    </section>
+
+    <aside class="rounded-[1.75rem] border border-line bg-white/80 p-5 shadow-[0_16px_45px_rgba(10,53,116,0.08)] backdrop-blur lg:sticky lg:top-28">
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">Publishing</p>
+      <h2 class="mt-3 text-xl font-bold leading-tight text-ink">Use draft status until the article is ready.</h2>
+      <p class="mt-4 text-sm leading-6 text-muted">Published posts appear publicly only when their publish date is now or in the past.</p>
+      {% if categories %}
+        <div class="mt-6 border-t border-line pt-5">
+          <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">Live topics</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            {% for category in categories %}
+              <a href="{{ category.get_absolute_url }}" class="inline-flex min-h-10 items-center rounded-full border border-line bg-white/80 px-4 text-sm font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">{{ category.name }}</a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

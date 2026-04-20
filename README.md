@@ -4,8 +4,10 @@ A small Django blog project with PostgreSQL, MinIO-compatible media storage, a s
 
 ## Current Scope
 
-- Blog posts with title, slug, excerpt, WYSIWYG-editable content, cover image, status, publish date, and author.
-- Public post list and post detail pages.
+- Blog posts with title, slug, excerpt, WYSIWYG-editable content, cover image, categories, status, publish date, and author.
+- Categories with admin-managed names, slugs, descriptions, and public category archive pages.
+- Public post list, category-filtered post lists, and post detail pages.
+- Blog-styled post creation and editing pages protected by Django's native `add_post` and `change_post` permissions, including category assignment.
 - Public comment form on post detail pages.
 - Comments are stored unapproved by default and can be moderated in Django admin.
 - SQLite for local development and PostgreSQL configuration for production through environment variables.
@@ -92,6 +94,18 @@ posts/covers/YYYY/MM/
 
 Allowed cover image extensions are JPG, JPEG, PNG, and WebP. The default maximum upload size is 5 MB.
 
+## Categories
+
+Categories are managed in Django admin through the `blog` app. Each category has a unique name and slug, and posts can be assigned to one or more categories from the post edit form.
+
+Public category navigation appears on the home page and post detail pages. Category archive URLs use:
+
+```text
+/categories/<slug>/
+```
+
+Only categories attached to published posts are shown publicly.
+
 ## Tailwind
 
 Tailwind CSS is loaded from the CDN in `templates/base.html`. There is no Node.js build step.
@@ -108,7 +122,8 @@ python manage.py test
 
 ## Architecture Notes
 
-- `blog` owns posts, public post views, templates, and post admin configuration.
+- `blog` owns posts, categories, public post views, templates, and post admin configuration.
 - `comments` owns comment storage, public comment validation, and comment moderation admin.
+- Post creation and editing outside the admin use Django class-based generic views plus native auth permissions. Users need `blog.add_post` to create posts and `blog.change_post` to edit posts; superusers have both permissions automatically.
 - Django native APIs are preferred for models, forms, views, admin, storage, and database configuration.
 - Secrets must stay outside the repository.

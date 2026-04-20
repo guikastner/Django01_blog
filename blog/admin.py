@@ -8,18 +8,31 @@ from django.http import JsonResponse
 from django.urls import path, reverse
 from django.utils import timezone
 
-from .models import Post
+from .models import Category, Post
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "created_at")
+    search_fields = ("name", "description")
+    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ("title", "author", "status", "published_at", "created_at")
-    list_filter = ("status", "created_at", "published_at")
-    search_fields = ("title", "excerpt", "content")
+    list_display = ("title", "author", "status", "category_names", "published_at", "created_at")
+    list_filter = ("status", "categories", "created_at", "published_at")
+    search_fields = ("title", "excerpt", "content", "categories__name")
     prepopulated_fields = {"slug": ("title",)}
     readonly_fields = ("created_at", "updated_at")
+    filter_horizontal = ("categories",)
     date_hierarchy = "published_at"
     ordering = ("-published_at", "-created_at")
+
+    @admin.display(description="Categories")
+    def category_names(self, obj):
+        return ", ".join(category.name for category in obj.categories.all()) or "-"
 
     def get_urls(self):
         custom_urls = [

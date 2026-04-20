@@ -12,6 +12,7 @@ Construir um blog em Django com:
 4. Sistema de comentarios usando Django.
 5. Sempre manter um readme ok para o projeto em inglês.
 6. O Visual do projeto deve-se utilizar o TailWind, sem compilação.
+7. Sempre use o context7 como base de documentação
 
 ## Base de documentacao
 
@@ -240,3 +241,7 @@ Dependencias de infraestrutura provaveis:
 - O container Django usa `docker-entrypoint.sh`; no startup, ele roda migrations se `RUN_MIGRATIONS_ON_STARTUP=true` e cria o superusuario inicial via `ensure_superuser` se `CREATE_SUPERUSER_ON_STARTUP=true`.
 - O admin so deve mostrar o link "View on site" para posts que ja estejam publicos (`status=published` e `published_at` no passado), evitando 404 esperado ao tentar abrir rascunhos na area publica.
 - A UI publica segue uma direcao blog-first inspirada em `https://guikastner.github.io/web/`: paleta premium em azul, topbar em capsula, fundo claro com grid sutil, cards arredondados, tipografia `Space Grotesk` + `Source Serif 4`, feed cronologico de posts e largura de leitura limitada em torno de `max-w-[46rem]` no detalhe. O foco deve continuar visivel, alvos interativos devem ter pelo menos 44px de altura e formularios devem manter labels/erros acessiveis. O Tailwind continua carregado via CDN, sem pipeline de compilacao.
+- Categorias ficam no app `blog` como `Category`, com `name`, `slug`, `description` e relacionamento many-to-many com `Post`, permitindo que um post apareca em uma ou mais categorias.
+- A navegacao publica por categorias usa URLs em `/categories/<slug>/`, exibindo apenas posts publicados e apenas categorias vinculadas a posts publicos.
+- Usuarios autenticados com permissoes `blog.add_post` e `blog.change_post` podem acessar telas publicas simples para criar e editar posts, incluindo selecao de categorias; usuarios sem permissao devem continuar sem ver esses links.
+- A criacao e edicao de posts fora do admin usam views genericas do Django e permissoes nativas: `blog.add_post` para criar e `blog.change_post` para editar. Superusuarios possuem essas permissoes automaticamente; usuarios editoriais podem recebe-las individualmente. Os botoes de criacao/edicao na UI publica so aparecem quando o usuario autenticado possui a permissao correspondente.

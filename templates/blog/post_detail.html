@@ -5,12 +5,24 @@
 {% block content %}
   <article>
     <header class="mx-auto max-w-[46rem]">
-      <a href="{% url 'blog:post_list' %}" class="mb-8 inline-flex min-h-11 items-center rounded-full border border-line bg-white/80 px-5 text-sm font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Back to posts</a>
+      <div class="mb-8 flex flex-wrap gap-3">
+        <a href="{% url 'blog:post_list' %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white/80 px-5 text-sm font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Back to posts</a>
+        {% if perms.blog.change_post %}
+          <a href="{% url 'blog:post_update' post.slug %}" class="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Edit post</a>
+        {% endif %}
+      </div>
       <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">
         {% if post.published_at %}{{ post.published_at|date:"F j, Y" }}{% endif %}
         <span aria-hidden="true">/</span>
         {{ post.author.get_full_name|default:post.author.username }}
       </p>
+      {% if post.categories.all %}
+        <div class="mt-4 flex flex-wrap gap-2">
+          {% for category in post.categories.all %}
+            <a href="{{ category.get_absolute_url }}" class="inline-flex min-h-9 items-center rounded-full border border-line bg-paper px-3 text-xs font-bold uppercase tracking-[0.12em] text-deep transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">{{ category.name }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
       <h1 class="mt-4 font-serif text-[clamp(2.75rem,8vw,5.4rem)] font-semibold leading-[1] text-ink">{{ post.title }}</h1>
       {% if post.excerpt %}
         <p class="mt-6 text-xl leading-8 text-muted">{{ post.excerpt }}</p>
@@ -26,6 +38,17 @@
     <div class="mx-auto max-w-[46rem] rounded-[1.75rem] border border-line bg-white/92 p-6 text-[1.0625rem] leading-8 text-muted shadow-[0_16px_45px_rgba(10,53,116,0.08)] backdrop-blur sm:p-9 [&_a]:font-bold [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:my-8 [&_blockquote]:rounded-[1.25rem] [&_blockquote]:border [&_blockquote]:border-line [&_blockquote]:bg-paper [&_blockquote]:p-5 [&_blockquote]:font-serif [&_blockquote]:text-2xl [&_blockquote]:leading-tight [&_blockquote]:text-ink [&_h2]:mb-4 [&_h2]:mt-12 [&_h2]:font-serif [&_h2]:text-3xl [&_h2]:font-semibold [&_h2]:leading-tight [&_h2]:text-ink [&_h3]:mb-3 [&_h3]:mt-9 [&_h3]:text-2xl [&_h3]:font-bold [&_h3]:text-ink [&_img]:my-8 [&_img]:rounded-[1.25rem] [&_img]:shadow-[0_16px_45px_rgba(10,53,116,0.10)] [&_li]:mb-2 [&_ol]:mb-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:mb-6 [&_strong]:text-ink [&_ul]:mb-6 [&_ul]:list-disc [&_ul]:pl-6">
       {{ post.content|safe }}
     </div>
+
+    {% if categories %}
+      <nav class="mx-auto mt-10 max-w-[46rem]" aria-label="Category navigation">
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">More topics</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          {% for category in categories %}
+            <a href="{{ category.get_absolute_url }}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white/80 px-4 text-sm font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">{{ category.name }}</a>
+          {% endfor %}
+        </div>
+      </nav>
+    {% endif %}
   </article>
 
   <section class="mx-auto mt-14 max-w-[46rem]">
