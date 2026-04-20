@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Django Blog{% endblock %}
+
+{% block content %}
+  <section class="mx-auto grid max-w-[64rem] gap-8 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">New account</p>
+      <h1 class="mt-4 max-w-[12ch] font-serif text-[clamp(2.75rem,8vw,5rem)] font-semibold leading-[1] text-ink">Create your profile.</h1>
+      <p class="mt-6 max-w-[58ch] text-lg leading-8 text-muted">Register with a username, email, and password to access the blog as an authenticated user.</p>
+    </div>
+
+    <form method="post" class="rounded-[1.75rem] border border-line bg-white/90 p-6 shadow-[0_20px_60px_rgba(10,53,116,0.10)] backdrop-blur sm:p-7 [&_input]:mt-2 [&_input]:min-h-[3.25rem] [&_input]:w-full [&_input]:rounded-[1rem] [&_input]:border [&_input]:border-line [&_input]:bg-white [&_input]:px-4 [&_input]:text-base [&_input]:text-ink [&_input]:outline-none [&_input]:transition [&_input:focus]:border-brand [&_input:focus]:ring-4 [&_input:focus]:ring-brand/20">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="mb-5 rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
+          {{ form.non_field_errors|striptags }}
+        </div>
+      {% endif %}
+
+      <div class="space-y-5">
+        {% for field in form %}
+          <div>
+            <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-ink">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+              <p class="mt-2 text-xs leading-5 text-muted">{{ field.help_text|striptags }}</p>
+            {% endif %}
+            {% if field.errors %}
+              <p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ field.errors|striptags }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="mt-7 inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 12.75a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM4.5 20.25a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M18.75 8.25v4.5M21 10.5h-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Create account
+      </button>
+
+      <p class="mt-5 text-center text-sm text-muted">
+        Already registered?
+        <a href="{% url 'login' %}" class="font-bold text-accent underline underline-offset-4 transition hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Sign in</a>
+      </p>
+    </form>
+  </section>
+{% endblock %}

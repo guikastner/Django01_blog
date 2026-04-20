@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "storages",
+    "accounts",
     "blog",
     "comments",
 ]
@@ -132,3 +133,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MAX_COVER_IMAGE_SIZE = int(env("MAX_COVER_IMAGE_SIZE", str(5 * 1024 * 1024)))
 ALLOWED_COVER_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+LOGIN_REDIRECT_URL = "blog:post_list"
+LOGOUT_REDIRECT_URL = "blog:post_list"

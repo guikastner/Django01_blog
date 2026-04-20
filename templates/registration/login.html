@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Django Blog{% endblock %}
+
+{% block content %}
+  <section class="mx-auto grid max-w-[64rem] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-center">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">Editor access</p>
+      <h1 class="mt-4 max-w-[11ch] font-serif text-[clamp(2.75rem,8vw,5rem)] font-semibold leading-[1] text-ink">Sign in to write.</h1>
+      <p class="mt-6 max-w-[58ch] text-lg leading-8 text-muted">Use your Django account to access editorial tools and continue managing the blog.</p>
+    </div>
+
+    <form method="post" class="rounded-[1.75rem] border border-line bg-white/90 p-6 shadow-[0_20px_60px_rgba(10,53,116,0.10)] backdrop-blur sm:p-7 [&_input]:mt-2 [&_input]:min-h-[3.25rem] [&_input]:w-full [&_input]:rounded-[1rem] [&_input]:border [&_input]:border-line [&_input]:bg-white [&_input]:px-4 [&_input]:text-base [&_input]:text-ink [&_input]:outline-none [&_input]:transition [&_input:focus]:border-brand [&_input:focus]:ring-4 [&_input:focus]:ring-brand/20">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+
+      {% if form.non_field_errors %}
+        <div class="mb-5 rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
+          {{ form.non_field_errors|striptags }}
+        </div>
+      {% endif %}
+
+      <div class="space-y-5">
+        {% for field in form %}
+          <div>
+            <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-ink">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+              <p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ field.errors|striptags }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="mt-7 inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M15 3.75h1.5A3.75 3.75 0 0 1 20.25 7.5v9A3.75 3.75 0 0 1 16.5 20.25H15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M10.5 8.25 14.25 12l-3.75 3.75M3.75 12h10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Sign in
+      </button>
+
+      <p class="mt-5 text-center text-sm text-muted">
+        Need an account?
+        <a href="{% url 'accounts:signup' %}" class="font-bold text-accent underline underline-offset-4 transition hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Register</a>
+      </p>
+    </form>
+  </section>
+{% endblock %}

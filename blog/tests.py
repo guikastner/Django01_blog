@@ -112,6 +112,42 @@ class PostViewTests(TestCase):
         self.assertNotContains(response, "Hidden comment.")
 
 
+class AuthenticationViewTests(TestCase):
+    def test_login_page_uses_public_template(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sign in to write.")
+        self.assertContains(response, 'name="username"')
+
+    def test_public_navigation_shows_login_link_for_anonymous_users(self):
+        response = self.client.get(reverse("blog:post_list"))
+
+        self.assertContains(response, reverse("login"))
+        self.assertContains(response, "Login")
+        self.assertContains(response, reverse("accounts:signup"))
+        self.assertContains(response, "Register")
+
+    def test_public_navigation_shows_logout_button_for_authenticated_users(self):
+        user = get_user_model().objects.create_user(username="reader", password="password")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("blog:post_list"))
+
+        self.assertContains(response, reverse("logout"))
+        self.assertContains(response, "Logout")
+        self.assertNotContains(response, "Login")
+
+    def test_logout_requires_post_and_redirects_to_post_list(self):
+        user = get_user_model().objects.create_user(username="reader", password="password")
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("logout"))
+
+        self.assertRedirects(response, reverse("blog:post_list"))
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+
 class PostAdminTests(TestCase):
     def setUp(self):
         self.author = get_user_model().objects.create_user(username="editor", password="password")
