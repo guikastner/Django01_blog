@@ -6,6 +6,8 @@ A small Django blog project with PostgreSQL, MinIO-compatible media storage, a s
 
 - Blog posts with title, slug, excerpt, WYSIWYG-editable content, cover image, status, publish date, and author.
 - Public post list and post detail pages.
+- Public login page using Django's native authentication views.
+- Public registration page with a custom signup form and automatic login after account creation.
 - Public comment form on post detail pages.
 - Comments are stored unapproved by default and can be moderated in Django admin.
 - SQLite for local development and PostgreSQL configuration for production through environment variables.
@@ -98,6 +100,12 @@ Tailwind CSS is loaded from the CDN in `templates/base.html`. There is no Node.j
 
 The public interface uses a blog-first editorial design system defined through the Tailwind CDN configuration in `templates/base.html`. Its visual direction is inspired by `https://guikastner.github.io/web/`: premium blue accents, a light grid-backed background, pill navigation, rounded article cards, and the Space Grotesk / Source Serif 4 font pairing. It keeps the post list chronological and constrains article detail text to a readable measure, while preserving visible focus states, accessible form labels and errors, and touch-friendly buttons/links without adding a frontend build pipeline.
 
+## Authentication
+
+Django's built-in authentication URLs are mounted under `/accounts/`. The public login screen is available at `/accounts/login/`, uses `templates/registration/login.html`, and redirects authenticated users back to the post list by default.
+
+Custom registration lives in the `accounts` app without adding a custom user model. The signup screen is available at `/accounts/signup/`, uses `templates/registration/signup.html`, requires a unique email address, creates the user through Django's native `UserCreationForm`, and logs the new user in after a successful signup.
+
 ## Tests
 
 After installing dependencies and configuring a database, run:
@@ -110,5 +118,6 @@ python manage.py test
 
 - `blog` owns posts, public post views, templates, and post admin configuration.
 - `comments` owns comment storage, public comment validation, and comment moderation admin.
+- `accounts` owns custom public registration while still using Django's built-in user model and authentication views for login/logout.
 - Django native APIs are preferred for models, forms, views, admin, storage, and database configuration.
 - Secrets must stay outside the repository.
