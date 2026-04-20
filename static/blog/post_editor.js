@@ -7,6 +7,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const wrapper = document.createElement("div");
   wrapper.className = "local-wysiwyg";
 
+  const tabs = document.createElement("div");
+  tabs.className = "local-wysiwyg__tabs";
+  tabs.setAttribute("role", "tablist");
+  tabs.setAttribute("aria-label", "Editor mode");
+
   const toolbar = document.createElement("div");
   toolbar.className = "local-wysiwyg__toolbar";
 
@@ -14,11 +19,12 @@ document.addEventListener("DOMContentLoaded", function () {
   editor.className = "local-wysiwyg__editor";
   editor.contentEditable = "true";
   editor.innerHTML = textarea.value || "";
+  editor.setAttribute("role", "tabpanel");
+  editor.setAttribute("aria-label", "Post content editor");
 
-  const htmlToggle = document.createElement("button");
-  htmlToggle.type = "button";
-  htmlToggle.className = "local-wysiwyg__button";
-  htmlToggle.textContent = "HTML";
+  const status = document.createElement("p");
+  status.className = "local-wysiwyg__status";
+  status.setAttribute("aria-live", "polite");
 
   let htmlMode = false;
   let savedRange = null;
@@ -56,10 +62,52 @@ document.addEventListener("DOMContentLoaded", function () {
     textarea.value = htmlMode ? editor.textContent : editor.innerHTML;
   }
 
-  function runCommand(command, value = null) {
+  function setStatus(message, isError = false) {
+    status.textContent = message;
+    status.classList.toggle("local-wysiwyg__status--error", isError);
+  }
+
+  function updateToolbarState() {
+    toolbar.querySelectorAll("[data-command-state]").forEach((button) => {
+      const command = button.dataset.commandState;
+      let isActive = false;
+      try {
+        isActive = document.queryCommandState(command);
+      } catch (error) {
+        isActive = false;
+      }
+      button.classList.toggle("local-wysiwyg__button--active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
+  }
+
+  function setEditorMode(nextMode) {
+    if (nextMode === "html" && !htmlMode) {
+      editor.textContent = editor.innerHTML;
+      htmlMode = true;
+    }
+
+    if (nextMode === "visual" && htmlMode) {
+      editor.innerHTML = editor.textContent;
+      htmlMode = false;
+    }
+
+    wrapper.classList.toggle("local-wysiwyg--html", htmlMode);
+    visualTab.setAttribute("aria-selected", String(!htmlMode));
+    htmlTab.setAttribute("aria-selected", String(htmlMode));
+    editor.setAttribute("aria-label", htmlMode ? "Post content HTML editor" : "Post content visual editor");
+    syncTextarea();
     editor.focus();
+  }
+
+  function runCommand(command, value = null) {
+    if (htmlMode) {
+      return;
+    }
+    restoreSelection();
     document.execCommand(command, false, value);
     syncTextarea();
+    updateToolbarState();
   }
 
   function insertImage(url) {
@@ -83,11 +131,6 @@ document.addEventListener("DOMContentLoaded", function () {
       editor.appendChild(image);
     }
     syncTextarea();
-  }
-
-  function setStatus(message, isError = false) {
-    status.textContent = message;
-    status.classList.toggle("local-wysiwyg__status--error", isError);
   }
 
   async function uploadImage(file) {
@@ -124,19 +167,43 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function addButton(label, title, command, value = null) {
+  function addTab(label, mode) {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "local-wysiwyg__tab";
+    tab.textContent = label;
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-selected", mode === "visual" ? "true" : "false");
+    tab.addEventListener("click", function () {
+      setEditorMode(mode);
+    });
+    tabs.appendChild(tab);
+    return tab;
+  }
+
+  function addButton(label, title, command, value = null, tracksState = false) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "local-wysiwyg__button";
     button.textContent = label;
     button.title = title;
     button.setAttribute("aria-label", title);
+    if (tracksState) {
+      button.dataset.commandState = command;
+      button.setAttribute("aria-pressed", "false");
+    }
     button.addEventListener("click", function () {
-      if (!htmlMode) {
-        runCommand(command, value);
-      }
+      runCommand(command, value);
     });
     toolbar.appendChild(button);
+    return button;
+  }
+
+  function addIconButton(icon, title, command, value = null, tracksState = false) {
+    const button = addButton("", title, command, value, tracksState);
+    button.classList.add("local-wysiwyg__button--icon");
+    button.innerHTML = icon;
+    return button;
   }
 
   function addDivider() {
@@ -146,20 +213,64 @@ document.addEventListener("DOMContentLoaded", function () {
     toolbar.appendChild(divider);
   }
 
-  addButton("B", "Bold", "bold");
-  addButton("I", "Italic", "italic");
+  const visualTab = addTab("Visual", "visual");
+  const htmlTab = addTab("HTML", "html");
+
+  const formatSelect = document.createElement("select");
+  formatSelect.className = "local-wysiwyg__select";
+  formatSelect.title = "Text style";
+  formatSelect.setAttribute("aria-label", "Text style");
+  [
+    ["p", "Paragraph"],
+    ["h2", "Heading 2"],
+    ["h3", "Heading 3"],
+    ["blockquote", "Quote"],
+  ].forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    formatSelect.appendChild(option);
+  });
+  formatSelect.addEventListener("change", function () {
+    runCommand("formatBlock", formatSelect.value);
+  });
+  toolbar.appendChild(formatSelect);
+
   addDivider();
-  addButton("H2", "Heading 2", "formatBlock", "h2");
-  addButton("P", "Paragraph", "formatBlock", "p");
+  addButton("B", "Bold", "bold", null, true);
+  addButton("I", "Italic", "italic", null, true);
   addDivider();
-  addButton("ul", "Bulleted list", "insertUnorderedList");
-  addButton("ol", "Numbered list", "insertOrderedList");
+  addIconButton(
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="1.4"></circle><circle cx="6" cy="12" r="1.4"></circle><circle cx="6" cy="17" r="1.4"></circle><path d="M10 7h8"></path><path d="M10 12h8"></path><path d="M10 17h8"></path></svg>',
+    "Bulleted list",
+    "insertUnorderedList",
+    null,
+    true
+  );
+  addIconButton(
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h1.5V4.5L5 5.4"></path><path d="M4.8 13.2c0-1 2.8-1.1 2.8.2 0 .9-1.5 1.3-2.8 2.8h3"></path><path d="M5 19.4c.4.5 2.7.7 2.7-.7 0-.8-.7-1.1-1.4-1.1.7 0 1.2-.4 1.2-1.1 0-1.1-1.8-1.2-2.4-.6"></path><path d="M11 7h7"></path><path d="M11 12h7"></path><path d="M11 17h7"></path></svg>',
+    "Numbered list",
+    "insertOrderedList",
+    null,
+    true
+  );
+  addDivider();
+  addIconButton(
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7H4v5"></path><path d="M4 7l5-5"></path><path d="M5 7h8a5 5 0 1 1 0 10h-3"></path></svg>',
+    "Undo",
+    "undo"
+  );
+  addIconButton(
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7h5v5"></path><path d="M20 7l-5-5"></path><path d="M19 7h-8a5 5 0 1 0 0 10h3"></path></svg>',
+    "Redo",
+    "redo"
+  );
   addDivider();
 
   const linkButton = document.createElement("button");
   linkButton.type = "button";
-  linkButton.className = "local-wysiwyg__button";
-  linkButton.textContent = "Link";
+  linkButton.className = "local-wysiwyg__button local-wysiwyg__button--icon";
+  linkButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"></path><path d="M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 0 0 12 20.1l1.1-1.1"></path></svg>';
   linkButton.title = "Create link";
   linkButton.setAttribute("aria-label", "Create link");
   linkButton.addEventListener("click", function () {
@@ -180,8 +291,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const imageButton = document.createElement("button");
   imageButton.type = "button";
-  imageButton.className = "local-wysiwyg__button";
-  imageButton.textContent = "Media";
+  imageButton.className = "local-wysiwyg__button local-wysiwyg__button--icon local-wysiwyg__button--primary";
+  imageButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-2.5L16 16"></path><path d="M14 14l2-2 4 4"></path><circle cx="8.5" cy="8.5" r="1.5"></circle></svg>';
   imageButton.title = "Upload media";
   imageButton.setAttribute("aria-label", "Upload media");
   imageButton.addEventListener("click", function () {
@@ -199,28 +310,21 @@ document.addEventListener("DOMContentLoaded", function () {
   toolbar.appendChild(imageButton);
   toolbar.appendChild(imageInput);
 
-  htmlToggle.title = "Edit HTML";
-  htmlToggle.setAttribute("aria-label", "Edit HTML");
-  htmlToggle.addEventListener("click", function () {
-    htmlMode = !htmlMode;
-    htmlToggle.classList.toggle("local-wysiwyg__button--active", htmlMode);
-    editor.textContent = htmlMode ? editor.innerHTML : editor.textContent;
-    syncTextarea();
-  });
-  toolbar.appendChild(htmlToggle);
-
-  const status = document.createElement("p");
-  status.className = "local-wysiwyg__status";
-  status.setAttribute("aria-live", "polite");
-
+  wrapper.appendChild(tabs);
   wrapper.appendChild(toolbar);
   wrapper.appendChild(editor);
   wrapper.appendChild(status);
   textarea.parentNode.insertBefore(wrapper, textarea.nextSibling);
   textarea.classList.add("local-wysiwyg__textarea");
 
-  editor.addEventListener("keyup", saveSelection);
-  editor.addEventListener("mouseup", saveSelection);
+  editor.addEventListener("keyup", function () {
+    saveSelection();
+    updateToolbarState();
+  });
+  editor.addEventListener("mouseup", function () {
+    saveSelection();
+    updateToolbarState();
+  });
   editor.addEventListener("focus", saveSelection);
   editor.addEventListener("input", syncTextarea);
   editor.addEventListener("paste", function (event) {
@@ -242,5 +346,6 @@ document.addEventListener("DOMContentLoaded", function () {
     saveSelection();
     files.forEach((file) => uploadImage(file));
   });
+  document.addEventListener("selectionchange", updateToolbarState);
   textarea.form?.addEventListener("submit", syncTextarea);
 });

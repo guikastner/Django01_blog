@@ -107,7 +107,7 @@ The public navigation uses inline SVG icons, so it does not require an icon pack
 
 Post creation and post editing use the blog's own public editor at `/posts/new/` and `/posts/<slug>/edit/`. These screens use Django class-based views and native permissions: `blog.add_post` for creating posts and `blog.change_post` for editing posts.
 
-The content editor is a local WYSIWYG control backed by the `Post.content` field. It supports formatted text, links, HTML mode, uploaded images, and pasted image media. Editor media is saved through Django's configured default storage under:
+The content editor is a local WYSIWYG control backed by the `Post.content` field. It supports standardized formatting controls, links, uploaded images, pasted image media, and a dedicated HTML tab inside the editor for source editing. Editor media is saved through Django's configured default storage under:
 
 ```text
 posts/content/YYYY/MM/
