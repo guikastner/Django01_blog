@@ -211,6 +211,12 @@ class PostEditorViewTests(TestCase):
         self.add_permission(user, "change_post")
         self.client.force_login(user)
 
+        get_response = self.client.get(reverse("blog:post_update", kwargs={"slug": self.post.slug}))
+
+        self.assertContains(get_response, "Edit post")
+        self.assertContains(get_response, "Update post")
+        self.assertContains(get_response, 'data-editor-icon="update-post"')
+
         response = self.client.post(
             reverse("blog:post_update", kwargs={"slug": self.post.slug}),
             {
