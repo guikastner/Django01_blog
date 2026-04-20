@@ -1,0 +1,114 @@
+.local-wysiwyg {
+  margin-top: 0.5rem;
+}
+
+.local-wysiwyg__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid rgba(12, 41, 86, 0.14);
+  border-bottom: 0;
+  border-radius: 1.1rem 1.1rem 0 0;
+  background: rgba(248, 251, 255, 0.96);
+}
+
+.local-wysiwyg__button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba(12, 41, 86, 0.14);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #082f6f;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.local-wysiwyg__button:hover,
+.local-wysiwyg__button--active {
+  border-color: rgba(18, 103, 216, 0.35);
+  color: #1267d8;
+  transform: translateY(-1px);
+}
+
+.local-wysiwyg__button:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(18, 103, 216, 0.22);
+}
+
+.local-wysiwyg__divider {
+  width: 1px;
+  height: 1.75rem;
+  margin: 0 0.25rem;
+  background: rgba(12, 41, 86, 0.14);
+}
+
+.local-wysiwyg__editor {
+  min-height: 30rem;
+  padding: 1rem;
+  overflow: auto;
+  border: 1px solid rgba(12, 41, 86, 0.14);
+  border-radius: 0 0 1.1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.96);
+  color: #39465c;
+  line-height: 1.7;
+}
+
+.local-wysiwyg__editor:focus {
+  border-color: #1267d8;
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(18, 103, 216, 0.2);
+}
+
+.local-wysiwyg__editor h2 {
+  margin: 1.5em 0 0.6em;
+  color: #05070b;
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.local-wysiwyg__editor p {
+  margin: 0 0 1em;
+}
+
+.local-wysiwyg__editor ul,
+.local-wysiwyg__editor ol {
+  margin: 0 0 1em 1.5em;
+}
+
+.local-wysiwyg__editor ul {
+  list-style: disc;
+}
+
+.local-wysiwyg__editor ol {
+  list-style: decimal;
+}
+
+.local-wysiwyg__editor img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.25rem 0;
+  border-radius: 1rem;
+  box-shadow: 0 16px 45px rgba(10, 53, 116, 0.1);
+}
+
+.local-wysiwyg__status {
+  min-height: 1.25rem;
+  margin: 0.5rem 0 0;
+  color: #39465c;
+  font-size: 0.875rem;
+}
+
+.local-wysiwyg__status--error {
+  color: #b91c1c;
+}
+
+.local-wysiwyg__textarea {
+  display: none;
+}

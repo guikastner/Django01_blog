@@ -2,6 +2,7 @@ import shutil
 import tempfile
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.contrib.admin.sites import AdminSite
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -134,6 +135,139 @@ class PostViewTests(TestCase):
         self.assertContains(response, 'data-nav-icon="new-post"')
         self.assertContains(response, 'data-nav-icon="edit-post"')
         self.assertContains(response, 'data-nav-icon="admin"')
+        self.assertContains(response, reverse("blog:post_create"))
+        self.assertContains(response, reverse("blog:post_update", kwargs={"slug": self.published.slug}))
+        self.assertNotContains(response, reverse("admin:blog_post_add"))
+        self.assertNotContains(response, reverse("admin:blog_post_change", args=[self.published.pk]))
+
+
+class PostEditorViewTests(TestCase):
+    def setUp(self):
+        self.author = get_user_model().objects.create_user(username="editor", password="password")
+        self.post = Post.objects.create(
+            title="Editable",
+            slug="editable",
+            content="<p>Old body</p>",
+            author=self.author,
+            status=Post.Status.PUBLISHED,
+            published_at=timezone.now(),
+        )
+
+    def add_permission(self, user, codename):
+        user.user_permissions.add(Permission.objects.get(codename=codename))
+
+    def test_create_post_requires_add_permission(self):
+        user = get_user_model().objects.create_user(username="writer", password="password")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("blog:post_create"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_post_uses_public_editor_for_authorized_user(self):
+        user = get_user_model().objects.create_user(username="writer", password="password")
+        self.add_permission(user, "add_post")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("blog:post_create"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Create post")
+        self.assertContains(response, "blog/post_editor.js")
+        self.assertContains(response, reverse("blog:post_content_upload"))
+
+    def test_authorized_user_can_create_post(self):
+        user = get_user_model().objects.create_user(username="writer", password="password")
+        self.add_permission(user, "add_post")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("blog:post_create"),
+            {
+                "title": "New draft",
+                "slug": "new-draft",
+                "excerpt": "Short",
+                "content": "<p>Created body</p>",
+                "status": Post.Status.DRAFT,
+                "published_at": "",
+            },
+        )
+
+        created = Post.objects.get(slug="new-draft")
+        self.assertRedirects(response, reverse("blog:post_list"))
+        self.assertEqual(created.author, user)
+        self.assertEqual(created.content, "<p>Created body</p>")
+
+    def test_edit_post_requires_change_permission(self):
+        user = get_user_model().objects.create_user(username="reader", password="password")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("blog:post_update", kwargs={"slug": self.post.slug}))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_authorized_user_can_edit_post_in_public_editor(self):
+        user = get_user_model().objects.create_user(username="publisher", password="password")
+        self.add_permission(user, "change_post")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("blog:post_update", kwargs={"slug": self.post.slug}),
+            {
+                "title": "Updated title",
+                "slug": "updated-title",
+                "excerpt": "Updated excerpt",
+                "content": "<p>Updated body</p>",
+                "status": Post.Status.PUBLISHED,
+                "published_at": self.post.published_at.strftime("%Y-%m-%dT%H:%M"),
+            },
+        )
+
+        self.post.refresh_from_db()
+        self.assertRedirects(response, self.post.get_absolute_url())
+        self.assertEqual(self.post.title, "Updated title")
+        self.assertEqual(self.post.slug, "updated-title")
+        self.assertEqual(self.post.content, "<p>Updated body</p>")
+
+    def test_content_upload_requires_editor_permission(self):
+        user = get_user_model().objects.create_user(username="reader", password="password")
+        self.client.force_login(user)
+        image = SimpleUploadedFile("pasted.png", b"not-a-real-image", content_type="image/png")
+
+        response = self.client.post(reverse("blog:post_content_upload"), {"image": image})
+
+        self.assertEqual(response.status_code, 403)
+
+    @override_settings(
+        MEDIA_URL="/media/",
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        },
+    )
+    def test_content_upload_accepts_image_for_authorized_user(self):
+        media_root = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(media_root, ignore_errors=True))
+        user = get_user_model().objects.create_user(username="uploader", password="password")
+        self.add_permission(user, "change_post")
+        self.client.force_login(user)
+
+        with override_settings(MEDIA_ROOT=media_root):
+            image = SimpleUploadedFile(
+                "pasted.png",
+                (
+                    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+                    b"\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4"
+                    b"\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05"
+                    b"\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+                ),
+                content_type="image/png",
+            )
+
+            response = self.client.post(reverse("blog:post_content_upload"), {"image": image})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/media/posts/content/", response.json()["url"])
 
 
 class AuthenticationViewTests(TestCase):

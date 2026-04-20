@@ -1,13 +1,8 @@
-from pathlib import Path
-from uuid import uuid4
-
 from django.contrib import admin
-from django.conf import settings
-from django.core.files.storage import default_storage
 from django.http import JsonResponse
 from django.urls import path, reverse
-from django.utils import timezone
 
+from .media import save_editor_image, validate_editor_image
 from .models import Post
 
 
@@ -38,12 +33,7 @@ class PostAdmin(admin.ModelAdmin):
         return formfield
 
     def get_view_on_site_url(self, obj=None):
-        if (
-            obj is None
-            or obj.status != Post.Status.PUBLISHED
-            or obj.published_at is None
-            or obj.published_at > timezone.now()
-        ):
+        if obj is None or not obj.is_public():
             return None
         return super().get_view_on_site_url(obj)
 
@@ -55,26 +45,11 @@ class PostAdmin(admin.ModelAdmin):
         if image is None:
             return JsonResponse({"error": "No image file was uploaded."}, status=400)
 
-        content_type = getattr(image, "content_type", "")
-        if content_type not in settings.ALLOWED_COVER_IMAGE_TYPES:
-            return JsonResponse({"error": "Only JPEG, PNG, and WebP images are allowed."}, status=400)
+        error = validate_editor_image(image)
+        if error:
+            return JsonResponse({"error": error}, status=400)
 
-        if image.size > settings.MAX_COVER_IMAGE_SIZE:
-            max_mb = settings.MAX_COVER_IMAGE_SIZE // (1024 * 1024)
-            return JsonResponse({"error": f"Images must be smaller than {max_mb} MB."}, status=400)
-
-        extension = Path(image.name).suffix.lower()
-        if extension not in {".jpg", ".jpeg", ".png", ".webp"}:
-            extension = {
-                "image/jpeg": ".jpg",
-                "image/png": ".png",
-                "image/webp": ".webp",
-            }[content_type]
-
-        now = timezone.now()
-        path_name = f"posts/content/{now:%Y/%m}/{uuid4().hex}{extension}"
-        saved_path = default_storage.save(path_name, image)
-        return JsonResponse({"url": default_storage.url(saved_path)})
+        return JsonResponse({"url": save_editor_image(image)})
 
     class Media:
         css = {"all": ("blog/admin_wysiwyg.css",)}
