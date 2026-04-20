@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Django Blog{% endblock %}</title>
+    <script>
+      window.tailwind = window.tailwind || {};
+      window.tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#172033",
+              paper: "#f7f3ec",
+              clay: "#c7664d",
+              moss: "#51685c",
+              smoke: "#e4ded4"
+            },
+            fontFamily: {
+              sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+              serif: ["Georgia", "ui-serif", "serif"]
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-paper font-sans text-ink antialiased">
+    <a href="#content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-ink focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-white focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2">Skip to content</a>
+    <header class="border-b border-smoke bg-paper/95 backdrop-blur">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
+        <a href="{% url 'blog:post_list' %}" class="inline-flex min-h-11 items-center text-xl font-bold text-ink outline-none transition hover:text-clay focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-4 focus-visible:ring-offset-paper">Django Blog</a>
+        <nav aria-label="Primary navigation" class="flex items-center gap-2">
+          <a href="{% url 'blog:post_list' %}" class="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-ink transition hover:bg-white/70 hover:text-clay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Posts</a>
+          <a href="/admin/" class="inline-flex min-h-11 items-center rounded-md border border-ink/15 bg-white px-4 text-sm font-semibold text-ink shadow-sm transition hover:border-clay hover:text-clay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Admin</a>
+        </nav>
+      </div>
+    </header>
+    <main id="content" class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      {% if messages %}
+        <div class="mb-8 space-y-3" aria-live="polite">
+          {% for message in messages %}
+            <div class="rounded-md border border-moss/25 bg-white px-4 py-3 text-sm font-medium text-moss shadow-sm">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

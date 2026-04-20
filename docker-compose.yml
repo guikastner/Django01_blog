@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_LOCAL_DB:-django_blog_local}
+      POSTGRES_USER: ${POSTGRES_LOCAL_USER:-django_blog_local}
+      POSTGRES_PASSWORD: ${POSTGRES_LOCAL_PASSWORD:?Set POSTGRES_LOCAL_PASSWORD in .env}
+    ports:
+      - "${POSTGRES_LOCAL_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
