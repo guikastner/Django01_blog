@@ -111,6 +111,30 @@ class PostViewTests(TestCase):
         self.assertContains(response, "Visible comment.")
         self.assertNotContains(response, "Hidden comment.")
 
+    def test_public_navigation_hides_editor_actions_for_anonymous_users(self):
+        response = self.client.get(reverse("blog:post_list"))
+
+        self.assertContains(response, 'data-nav-icon="posts"')
+        self.assertNotContains(response, "New post")
+        self.assertNotContains(response, "Admin")
+
+    def test_public_navigation_shows_visible_editor_actions_for_staff(self):
+        staff_user = get_user_model().objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="password",
+        )
+        self.client.force_login(staff_user)
+
+        response = self.client.get(self.published.get_absolute_url())
+
+        self.assertContains(response, "New post")
+        self.assertContains(response, "Edit post")
+        self.assertContains(response, "Admin")
+        self.assertContains(response, 'data-nav-icon="new-post"')
+        self.assertContains(response, 'data-nav-icon="edit-post"')
+        self.assertContains(response, 'data-nav-icon="admin"')
+
 
 class AuthenticationViewTests(TestCase):
     def test_login_page_uses_public_template(self):

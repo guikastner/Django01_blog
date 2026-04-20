@@ -100,6 +100,8 @@ Tailwind CSS is loaded from the CDN in `templates/base.html`. There is no Node.j
 
 The public interface uses a blog-first editorial design system defined through the Tailwind CDN configuration in `templates/base.html`. Its visual direction is inspired by `https://guikastner.github.io/web/`: premium blue accents, a light grid-backed background, pill navigation, rounded article cards, and the Space Grotesk / Source Serif 4 font pairing. It keeps the post list chronological and constrains article detail text to a readable measure, while preserving visible focus states, accessible form labels and errors, and touch-friendly buttons/links without adding a frontend build pipeline.
 
+The public navigation uses inline SVG icons, so it does not require an icon package or build step. Editorial actions are shown with Django's native template permission checks: users with `blog.add_post` can open the admin post creation form, users with `blog.change_post` can edit the current post from its detail page, and staff users can access the admin index.
+
 ## Authentication
 
 Django's built-in authentication URLs are mounted under `/accounts/`. The public login screen is available at `/accounts/login/`, uses `templates/registration/login.html`, and redirects authenticated users back to the post list by default.
