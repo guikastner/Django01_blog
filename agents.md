@@ -251,3 +251,4 @@ Dependencias de infraestrutura provaveis:
 - Categorias ficam no app `blog` como modelo `Category`, ligadas a `Post` por `ManyToManyField`, com slug unico e administracao tambem registrada no Django admin.
 - O container de testes fica como servico `test` no `docker-compose.yml`; ele reutiliza a imagem Django, desliga migrations/superuser no entrypoint e executa `python manage.py test` com SQLite temporario.
 - Areas publicas de leitura, comentarios e eventuais colunas devem usar a mesma largura maxima da topbar (`1180px`) para manter alinhamento visual entre navegacao e conteudo.
+- Uploads de midia do editor publico e do editor no Django admin devem validar o conteudo real com Pillow antes de salvar, rejeitando bytes que nao sejam imagem valida e arquivos cujo formato real nao corresponda ao `content_type` declarado.

@@ -132,7 +132,7 @@ The content editor is a local WYSIWYG control backed by the `Post.content` field
 posts/content/YYYY/MM/
 ```
 
-The media upload endpoint uses the same type and size validation configured for blog images and works with local media storage or the configured MinIO-compatible storage.
+The media upload endpoint uses the same type and size validation configured for blog images and verifies the real image content with Pillow before saving. Spoofed uploads, such as non-image bytes sent with an image content type or a PNG declared as JPEG, are rejected before they reach local media storage or the configured MinIO-compatible storage.
 
 ## Authentication
 
