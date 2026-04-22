@@ -1,15 +1,18 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count, Q
 from django.http import JsonResponse
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView, View
 
 from comments.forms import CommentForm
+from comments.models import Comment
 
-from .forms import PostForm
+from .forms import CategoryForm, PostForm
 from .media import save_editor_image, validate_editor_image
-from .models import Post
+from .models import Category, Post
 
 
 class PostListView(ListView):
@@ -125,3 +128,112 @@ class PostContentUploadView(LoginRequiredMixin, View):
             return JsonResponse({"error": error}, status=400)
 
         return JsonResponse({"url": save_editor_image(image)})
+
+
+class DashboardPostListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = Post
+    template_name = "blog/dashboard/post_list.html"
+    context_object_name = "posts"
+    permission_required = "blog.view_post"
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            Post.objects.select_related("author")
+            .prefetch_related("categories")
+            .annotate(
+                total_comments=Count("comments", distinct=True),
+                pending_comments=Count("comments", filter=Q(comments__is_approved=False), distinct=True),
+            )
+            .order_by("-published_at", "-created_at")
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["pending_comment_count"] = Comment.objects.filter(is_approved=False).count()
+        context["category_count"] = Category.objects.count()
+        return context
+
+
+class DashboardPostDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = Post
+    template_name = "blog/dashboard/post_confirm_delete.html"
+    context_object_name = "post"
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
+    permission_required = "blog.delete_post"
+
+    def get_queryset(self):
+        return Post.objects.select_related("author")
+
+    def get_success_url(self):
+        return reverse("blog:dashboard_posts")
+
+    def form_valid(self, form):
+        messages.success(self.request, "Post deleted.")
+        return super().form_valid(form)
+
+
+class DashboardCategoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = "blog.add_category"
+    template_name = "blog/dashboard/categories.html"
+    form_class = CategoryForm
+
+    def get(self, request, *args, **kwargs):
+        return self.render(request, self.form_class())
+
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Category added.")
+            return redirect("blog:dashboard_categories")
+        return self.render(request, form)
+
+    def render(self, request, form):
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "categories": Category.objects.annotate(post_count=Count("posts")),
+            },
+        )
+
+
+class DashboardCommentModerationView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = Comment
+    template_name = "blog/dashboard/comments.html"
+    context_object_name = "comments"
+    permission_required = "comments.change_comment"
+    paginate_by = 25
+
+    def get_queryset(self):
+        queryset = Comment.objects.select_related("post").order_by("is_approved", "-created_at")
+        if self.request.GET.get("status") == "approved":
+            return queryset.filter(is_approved=True)
+        if self.request.GET.get("status") == "pending":
+            return queryset.filter(is_approved=False)
+        return queryset
+
+    def post(self, request, *args, **kwargs):
+        comment = get_object_or_404(Comment, pk=request.POST.get("comment_id"))
+        action = request.POST.get("action")
+
+        if action == "approve":
+            comment.is_approved = True
+            comment.save(update_fields=["is_approved", "updated_at"])
+            messages.success(request, "Comment approved.")
+        elif action == "reject":
+            comment.is_approved = False
+            comment.save(update_fields=["is_approved", "updated_at"])
+            messages.success(request, "Comment moved back to pending.")
+        elif action == "delete":
+            if not request.user.has_perm("comments.delete_comment"):
+                raise PermissionDenied
+            comment.delete()
+            messages.success(request, "Comment deleted.")
+        else:
+            messages.error(request, "Unknown moderation action.")
+
+        return redirect(request.get_full_path())

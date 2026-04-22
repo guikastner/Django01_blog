@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Django Blog{% endblock %}
+
+{% block content %}
+  <section class="mx-auto max-w-[72rem]">
+    {% include "blog/dashboard/_nav.html" %}
+
+    <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">Custom admin</p>
+        <h1 class="mt-3 font-serif text-[clamp(2.5rem,7vw,4.75rem)] font-semibold leading-none text-ink">All posts</h1>
+      </div>
+      {% if perms.blog.add_post %}
+        <a href="{% url 'blog:post_create' %}" class="inline-flex min-h-11 w-fit items-center rounded-full bg-accent px-5 text-sm font-bold text-white transition hover:bg-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">New post</a>
+      {% endif %}
+    </div>
+
+    <div class="mb-6 grid gap-4 md:grid-cols-3">
+      <div class="rounded-[1.5rem] border border-line bg-white/90 p-5 shadow-[0_16px_45px_rgba(10,53,116,0.08)]">
+        <p class="text-sm font-bold text-muted">Posts</p>
+        <p class="mt-2 text-3xl font-bold text-ink">{{ paginator.count }}</p>
+      </div>
+      <div class="rounded-[1.5rem] border border-line bg-white/90 p-5 shadow-[0_16px_45px_rgba(10,53,116,0.08)]">
+        <p class="text-sm font-bold text-muted">Pending comments</p>
+        <p class="mt-2 text-3xl font-bold text-ink">{{ pending_comment_count }}</p>
+      </div>
+      <div class="rounded-[1.5rem] border border-line bg-white/90 p-5 shadow-[0_16px_45px_rgba(10,53,116,0.08)]">
+        <p class="text-sm font-bold text-muted">Categories</p>
+        <p class="mt-2 text-3xl font-bold text-ink">{{ category_count }}</p>
+      </div>
+    </div>
+
+    <div class="overflow-hidden rounded-[1.75rem] border border-line bg-white/92 shadow-[0_16px_45px_rgba(10,53,116,0.08)]">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-line text-left text-sm">
+          <thead class="bg-paper text-xs font-bold uppercase tracking-[0.12em] text-deep">
+            <tr>
+              <th scope="col" class="px-5 py-4">Post</th>
+              <th scope="col" class="px-5 py-4">Status</th>
+              <th scope="col" class="px-5 py-4">Categories</th>
+              <th scope="col" class="px-5 py-4">Comments</th>
+              <th scope="col" class="px-5 py-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            {% for post in posts %}
+              <tr>
+                <td class="px-5 py-4 align-top">
+                  <p class="font-bold text-ink">{{ post.title }}</p>
+                  <p class="mt-1 text-muted">{{ post.author.get_full_name|default:post.author.username }}{% if post.published_at %} / {{ post.published_at|date:"F j, Y" }}{% endif %}</p>
+                </td>
+                <td class="px-5 py-4 align-top">
+                  <span class="inline-flex rounded-full border border-line bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-accent">{{ post.get_status_display }}</span>
+                </td>
+                <td class="px-5 py-4 align-top text-muted">
+                  {% for category in post.categories.all %}
+                    <span class="mb-1 mr-1 inline-flex rounded-full bg-soft px-3 py-1 text-xs font-bold text-deep">{{ category.name }}</span>
+                  {% empty %}
+                    None
+                  {% endfor %}
+                </td>
+                <td class="px-5 py-4 align-top text-muted">
+                  {{ post.total_comments }} total
+                  {% if post.pending_comments %}<span class="block font-bold text-deep">{{ post.pending_comments }} pending</span>{% endif %}
+                </td>
+                <td class="px-5 py-4 align-top">
+                  <div class="flex flex-wrap gap-2">
+                    {% if post.is_public %}
+                      <a href="{{ post.get_absolute_url }}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-4 font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">View</a>
+                    {% endif %}
+                    {% if perms.blog.change_post %}
+                      <a href="{% url 'blog:post_update' post.slug %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-4 font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Edit</a>
+                    {% endif %}
+                    {% if perms.blog.delete_post %}
+                      <a href="{% url 'blog:dashboard_post_delete' post.slug %}" class="inline-flex min-h-11 items-center rounded-full border border-red-200 bg-red-50 px-4 font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200">Delete</a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="px-5 py-8 text-muted">No posts exist yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if is_paginated %}
+      <nav class="mt-8 flex items-center justify-between text-sm font-bold" aria-label="Dashboard post pagination">
+        {% if page_obj.has_previous %}
+          <a class="inline-flex min-h-11 items-center rounded-full border border-line bg-white/80 px-5 text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+        {% else %}
+          <span></span>
+        {% endif %}
+        <span class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a class="inline-flex min-h-11 items-center rounded-full border border-line bg-white/80 px-5 text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25" href="?page={{ page_obj.next_page_number }}">Next</a>
+        {% else %}
+          <span></span>
+        {% endif %}
+      </nav>
+    {% endif %}
+  </section>
+{% endblock %}

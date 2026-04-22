@@ -43,6 +43,7 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts")
+    categories = models.ManyToManyField("Category", blank=True, related_name="posts")
 
     objects = models.Manager()
     published = PublishedPostManager()
@@ -71,3 +72,21 @@ class Post(models.Model):
         if self.status == self.Status.PUBLISHED and self.published_at is None:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    slug = models.SlugField(max_length=140, unique=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "categories"
+        indexes = [
+            models.Index(fields=["slug"]),
+        ]
+
+    def __str__(self):
+        return self.name

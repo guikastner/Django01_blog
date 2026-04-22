@@ -3,13 +3,21 @@ from django.http import JsonResponse
 from django.urls import path, reverse
 
 from .media import save_editor_image, validate_editor_image
-from .models import Post
+from .models import Category, Post
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "created_at")
+    search_fields = ("name", "slug", "description")
+    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ("created_at", "updated_at")
 
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     list_display = ("title", "author", "status", "published_at", "created_at")
-    list_filter = ("status", "created_at", "published_at")
+    list_filter = ("status", "categories", "created_at", "published_at")
     search_fields = ("title", "excerpt", "content")
     prepopulated_fields = {"slug": ("title",)}
     readonly_fields = ("created_at", "updated_at")

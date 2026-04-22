@@ -8,6 +8,20 @@ services:
     volumes:
       - .:/app
 
+  test:
+    build: .
+    environment:
+      DJANGO_SECRET_KEY: test-secret-key
+      DJANGO_DEBUG: "True"
+      RUN_MIGRATIONS_ON_STARTUP: "false"
+      CREATE_SUPERUSER_ON_STARTUP: "false"
+      DJANGO_ENV: development
+      SQLITE_NAME_DEV: /tmp/django-blog-test.sqlite3
+      USE_S3_STORAGE: "False"
+    volumes:
+      - .:/app
+    command: ["python", "manage.py", "test"]
+
   postgres:
     image: postgres:16
     environment:

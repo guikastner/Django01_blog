@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from comments.models import Comment
 
-from .models import Post
+from .models import Category, Post
 from .admin import PostAdmin
 
 
@@ -48,6 +48,13 @@ class PostModelTests(TestCase):
         )
 
         self.assertIsNotNone(post.published_at)
+
+
+class CategoryModelTests(TestCase):
+    def test_str_returns_name(self):
+        category = Category.objects.create(name="Django", slug="django")
+
+        self.assertEqual(str(category), "Django")
 
 
 class PostViewTests(TestCase):
@@ -274,6 +281,127 @@ class PostEditorViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("/media/posts/content/", response.json()["url"])
+
+
+class DashboardViewTests(TestCase):
+    def setUp(self):
+        self.author = get_user_model().objects.create_user(username="editor", password="password")
+        self.published = Post.objects.create(
+            title="Published",
+            slug="dashboard-published",
+            content="<p>Public body</p>",
+            author=self.author,
+            status=Post.Status.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        self.draft = Post.objects.create(
+            title="Draft dashboard post",
+            slug="dashboard-draft",
+            content="<p>Draft body</p>",
+            author=self.author,
+        )
+        self.user = get_user_model().objects.create_user(username="manager", password="password")
+
+    def add_permission(self, user, codename, app_label="blog"):
+        user.user_permissions.add(Permission.objects.get(codename=codename, content_type__app_label=app_label))
+
+    def test_dashboard_requires_post_view_permission(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("blog:dashboard_posts"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_dashboard_lists_all_posts_for_authorized_user(self):
+        self.add_permission(self.user, "view_post")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("blog:dashboard_posts"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.published.title)
+        self.assertContains(response, self.draft.title)
+
+    def test_authorized_user_can_delete_post_from_dashboard(self):
+        self.add_permission(self.user, "view_post")
+        self.add_permission(self.user, "delete_post")
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("blog:dashboard_post_delete", kwargs={"slug": self.draft.slug}))
+
+        self.assertRedirects(response, reverse("blog:dashboard_posts"))
+        self.assertFalse(Post.objects.filter(pk=self.draft.pk).exists())
+
+    def test_authorized_user_can_add_category(self):
+        self.add_permission(self.user, "add_category")
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("blog:dashboard_categories"),
+            {"name": "Django", "slug": "django", "description": "Django notes."},
+        )
+
+        self.assertRedirects(response, reverse("blog:dashboard_categories"))
+        self.assertTrue(Category.objects.filter(slug="django").exists())
+
+    def test_post_form_accepts_categories(self):
+        category = Category.objects.create(name="Python", slug="python")
+        self.add_permission(self.user, "add_post")
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("blog:post_create"),
+            {
+                "title": "Categorized",
+                "slug": "categorized",
+                "excerpt": "",
+                "content": "<p>Body</p>",
+                "categories": [str(category.pk)],
+                "status": Post.Status.DRAFT,
+                "published_at": "",
+            },
+        )
+
+        post = Post.objects.get(slug="categorized")
+        self.assertRedirects(response, reverse("blog:post_list"))
+        self.assertEqual(list(post.categories.all()), [category])
+
+    def test_authorized_user_can_moderate_comments(self):
+        comment = Comment.objects.create(
+            post=self.published,
+            name="Reader",
+            email="reader@example.com",
+            body="Needs approval.",
+        )
+        self.add_permission(self.user, "change_comment", app_label="comments")
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("blog:dashboard_comments"),
+            {"comment_id": comment.pk, "action": "approve"},
+        )
+
+        comment.refresh_from_db()
+        self.assertRedirects(response, reverse("blog:dashboard_comments"))
+        self.assertTrue(comment.is_approved)
+
+    def test_delete_comment_requires_delete_permission(self):
+        comment = Comment.objects.create(
+            post=self.published,
+            name="Reader",
+            email="reader@example.com",
+            body="Remove me.",
+        )
+        self.add_permission(self.user, "change_comment", app_label="comments")
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("blog:dashboard_comments"),
+            {"comment_id": comment.pk, "action": "delete"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Comment.objects.filter(pk=comment.pk).exists())
 
 
 class AuthenticationViewTests(TestCase):

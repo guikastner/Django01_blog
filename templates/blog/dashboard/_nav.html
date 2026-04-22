@@ -1,0 +1,9 @@
+<nav aria-label="Dashboard navigation" class="mb-8 flex flex-wrap gap-2 border-b border-line pb-5 text-sm font-bold">
+  <a href="{% url 'blog:dashboard_posts' %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-5 text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Posts</a>
+  {% if perms.blog.add_category %}
+    <a href="{% url 'blog:dashboard_categories' %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-5 text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Categories</a>
+  {% endif %}
+  {% if perms.comments.change_comment %}
+    <a href="{% url 'blog:dashboard_comments' %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-5 text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Comments</a>
+  {% endif %}
+</nav>

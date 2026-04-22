@@ -60,6 +60,21 @@
           {% include "blog/partials/field_errors.html" with field=form.cover_image %}
         </div>
 
+        <fieldset>
+          <legend class="block text-sm font-bold text-ink">{{ form.categories.label }}</legend>
+          <div class="mt-3 space-y-2 rounded-[1.1rem] border border-line bg-white/80 p-4">
+            {% for checkbox in form.categories %}
+              <label for="{{ checkbox.id_for_label }}" class="flex min-h-11 items-center gap-3 text-sm font-semibold text-muted">
+                {{ checkbox.tag }}
+                <span>{{ checkbox.choice_label }}</span>
+              </label>
+            {% empty %}
+              <p class="text-sm leading-6 text-muted">No categories yet. Add categories from the dashboard.</p>
+            {% endfor %}
+          </div>
+          {% include "blog/partials/field_errors.html" with field=form.categories %}
+        </fieldset>
+
         <div>
           <label for="{{ form.status.id_for_label }}" class="block text-sm font-bold text-ink">{{ form.status.label }}</label>
           {{ form.status }}

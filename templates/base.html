@@ -68,6 +68,17 @@
                 <span>New post</span>
               </a>
             {% endif %}
+            {% if perms.blog.view_post %}
+              <a href="{% url 'blog:dashboard_posts' %}" class="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white px-4 text-sm font-bold text-accent transition hover:-translate-y-0.5 hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">
+                <svg data-nav-icon="dashboard" class="h-5 w-5 shrink-0 stroke-current text-brand" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 5a2 2 0 0 1 2-2h5v8H4z"></path>
+                  <path d="M13 3h5a2 2 0 0 1 2 2v4h-7z"></path>
+                  <path d="M4 13h7v8H6a2 2 0 0 1-2-2z"></path>
+                  <path d="M13 11h7v8a2 2 0 0 1-2 2h-5z"></path>
+                </svg>
+                <span>Dashboard</span>
+              </a>
+            {% endif %}
             {% if post and perms.blog.change_post %}
               <a href="{% url 'blog:post_update' post.slug %}" class="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white px-4 text-sm font-bold text-accent shadow-[0_12px_30px_rgba(10,53,116,0.08)] transition hover:-translate-y-0.5 hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">
                 <svg data-nav-icon="edit-post" class="h-5 w-5 shrink-0 stroke-current text-brand" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

@@ -7,10 +7,12 @@ A small Django blog project with PostgreSQL, MinIO-compatible media storage, a s
 - Blog posts with title, slug, excerpt, WYSIWYG-editable content, cover image, status, publish date, and author.
 - Public post list and post detail pages.
 - Permission-protected public post creation and editing screens, separate from Django admin.
+- Custom editorial dashboard for authenticated users with native Django permissions. It lists every post, links to edit/delete actions, manages categories, and moderates comments.
+- Post categories with a many-to-many relationship to posts.
 - Public login page using Django's native authentication views.
 - Public registration page with a custom signup form and automatic login after account creation.
 - Public comment form on post detail pages.
-- Comments are stored unapproved by default and can be moderated in Django admin.
+- Comments are stored unapproved by default and can be moderated in the custom dashboard or Django admin.
 - SQLite for local development and PostgreSQL configuration for production through environment variables.
 - Optional S3-compatible media storage for MinIO through `django-storages`.
 - Initial model, query, form, and view tests.
@@ -103,6 +105,23 @@ The public interface uses a blog-first editorial design system defined through t
 
 The public navigation uses inline SVG icons, so it does not require an icon package or build step. Editorial actions are shown with Django's native template permission checks: users with `blog.add_post` can open the public post creation screen, users with `blog.change_post` can edit the current post from its detail page, and staff users can access the admin index.
 
+## Custom Dashboard
+
+The custom dashboard starts at `/dashboard/` and uses the same Tailwind CDN visual system as the public site. It is not a replacement for Django's built-in admin internals; it is a focused editorial interface for common blog operations.
+
+Dashboard permissions use Django's native model permissions:
+
+```text
+blog.view_post        view every existing post, including drafts
+blog.change_post      edit posts
+blog.delete_post      delete posts
+blog.add_category     add categories
+comments.change_comment approve or reject comments
+comments.delete_comment delete comments
+```
+
+Users without the required permission receive a forbidden response even when logged in. Superusers have access to all dashboard sections.
+
 ## Editorial Editor
 
 Post creation and post editing use the blog's own public editor at `/posts/new/` and `/posts/<slug>/edit/`. These screens use Django class-based views and native permissions: `blog.add_post` for creating posts and `blog.change_post` for editing posts.
@@ -129,9 +148,15 @@ After installing dependencies and configuring a database, run:
 python manage.py test
 ```
 
+The Compose file also includes a test container that reuses the app image, disables startup migrations/superuser creation, and runs the same Django test suite against a temporary SQLite database:
+
+```bash
+docker compose run --rm test
+```
+
 ## Architecture Notes
 
-- `blog` owns posts, public post views, templates, and post admin configuration.
+- `blog` owns posts, categories, public post views, custom dashboard views/templates, and post admin configuration.
 - `comments` owns comment storage, public comment validation, and comment moderation admin.
 - `accounts` owns custom public registration while still using Django's built-in user model and authentication views for login/logout.
 - Django native APIs are preferred for models, forms, views, admin, storage, and database configuration.

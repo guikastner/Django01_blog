@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Post
+from .models import Category, Post
 
 
 INPUT_CLASS = (
@@ -18,7 +18,7 @@ TEXTAREA_CLASS = (
 class PostForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = ("title", "slug", "excerpt", "content", "cover_image", "status", "published_at")
+        fields = ("title", "slug", "excerpt", "content", "cover_image", "categories", "status", "published_at")
         widgets = {
             "title": forms.TextInput(attrs={"class": INPUT_CLASS}),
             "slug": forms.TextInput(attrs={"class": INPUT_CLASS}),
@@ -34,6 +34,7 @@ class PostForm(forms.ModelForm):
                 }
             ),
             "status": forms.Select(attrs={"class": INPUT_CLASS}),
+            "categories": forms.CheckboxSelectMultiple(),
             "published_at": forms.DateTimeInput(
                 attrs={"class": INPUT_CLASS, "type": "datetime-local"},
                 format="%Y-%m-%dT%H:%M",
@@ -45,3 +46,14 @@ class PostForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["content"].widget.attrs["data-upload-url"] = content_upload_url
         self.fields["published_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+
+
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = ("name", "slug", "description")
+        widgets = {
+            "name": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "slug": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "description": forms.Textarea(attrs={"class": TEXTAREA_CLASS, "rows": 4}),
+        }
