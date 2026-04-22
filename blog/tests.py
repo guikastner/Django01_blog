@@ -10,6 +10,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.models import UserProfile
 from comments.models import Comment
 
 from .models import Category, Post
@@ -96,16 +97,50 @@ class PostViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_comment_submission_creates_unapproved_comment(self):
+        reader = get_user_model().objects.create_user(
+            username="reader",
+            first_name="Blog",
+            last_name="Reader",
+            email="reader@example.com",
+            password="password",
+        )
+        self.client.force_login(reader)
+
         response = self.client.post(
             self.published.get_absolute_url(),
-            {"name": "Reader", "email": "reader@example.com", "body": "Useful post."},
+            {"body": "Useful post."},
             follow=True,
         )
 
         self.assertRedirects(response, self.published.get_absolute_url())
         comment = Comment.objects.get(post=self.published)
         self.assertFalse(comment.is_approved)
+        self.assertEqual(comment.user, reader)
+        self.assertEqual(comment.name, "Blog Reader")
         self.assertEqual(comment.email, "reader@example.com")
+
+    def test_anonymous_comment_submission_redirects_to_login(self):
+        response = self.client.post(self.published.get_absolute_url(), {"body": "Useful post."})
+
+        self.assertRedirects(response, f"{reverse('login')}?next={self.published.get_absolute_url()}")
+        self.assertFalse(Comment.objects.exists())
+
+    def test_comment_form_is_hidden_for_anonymous_users(self):
+        response = self.client.get(self.published.get_absolute_url())
+
+        self.assertContains(response, "Only registered users can leave comments.")
+        self.assertNotContains(response, "Submit comment")
+
+    def test_banned_user_cannot_submit_comment(self):
+        reader = get_user_model().objects.create_user(username="banned", email="banned@example.com", password="password")
+        UserProfile.for_user(reader).ban_from_comments(self.author, "Spam.")
+        self.client.force_login(reader)
+
+        response = self.client.post(self.published.get_absolute_url(), {"body": "Blocked."}, follow=True)
+
+        self.assertRedirects(response, self.published.get_absolute_url())
+        self.assertContains(response, "not allowed to submit comments")
+        self.assertFalse(Comment.objects.exists())
 
     def test_post_detail_shows_only_approved_comments(self):
         Comment.objects.create(
@@ -427,6 +462,67 @@ class DashboardViewTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Comment.objects.filter(pk=comment.pk).exists())
+
+    def test_dashboard_users_requires_profile_view_permission(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("blog:dashboard_users"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_dashboard_users_lists_and_filters_registered_users(self):
+        reader = get_user_model().objects.create_user(
+            username="reader",
+            email="reader@example.com",
+            first_name="Blog",
+            last_name="Reader",
+            password="password",
+        )
+        get_user_model().objects.create_user(username="other", email="other@example.com", password="password")
+        Comment.objects.create(
+            post=self.published,
+            user=reader,
+            name="Blog Reader",
+            email=reader.email,
+            body="Visible in counts.",
+            is_approved=True,
+        )
+        self.add_permission(self.user, "view_userprofile", app_label="accounts")
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("blog:dashboard_users"), {"username": "read", "email": "reader@"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Blog Reader")
+        self.assertContains(response, "1 comments / 1 approved")
+        self.assertNotContains(response, "other@example.com")
+
+    def test_dashboard_user_manager_can_ban_and_allow_comments(self):
+        reader = get_user_model().objects.create_user(username="reader", email="reader@example.com", password="password")
+        profile = UserProfile.for_user(reader)
+        self.add_permission(self.user, "view_userprofile", app_label="accounts")
+        self.add_permission(self.user, "change_userprofile", app_label="accounts")
+        self.client.force_login(self.user)
+
+        ban_response = self.client.post(
+            reverse("blog:dashboard_users"),
+            {"profile_id": profile.pk, "action": "ban_comments", "comment_ban_reason": "Spam reports."},
+        )
+
+        profile.refresh_from_db()
+        self.assertRedirects(ban_response, reverse("blog:dashboard_users"))
+        self.assertTrue(profile.is_comment_banned)
+        self.assertEqual(profile.comment_ban_reason, "Spam reports.")
+        self.assertEqual(profile.comment_banned_by, self.user)
+
+        allow_response = self.client.post(
+            reverse("blog:dashboard_users"),
+            {"profile_id": profile.pk, "action": "allow_comments"},
+        )
+
+        profile.refresh_from_db()
+        self.assertRedirects(allow_response, reverse("blog:dashboard_users"))
+        self.assertFalse(profile.is_comment_banned)
 
 
 class AuthenticationViewTests(TestCase):

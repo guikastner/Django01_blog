@@ -6,4 +6,7 @@
   {% if perms.comments.change_comment %}
     <a href="{% url 'blog:dashboard_comments' %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-5 text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Comments</a>
   {% endif %}
+  {% if perms.accounts.view_userprofile %}
+    <a href="{% url 'blog:dashboard_users' %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-5 text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">Users</a>
+  {% endif %}
 </nav>

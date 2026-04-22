@@ -25,14 +25,12 @@ class CommentModelTests(TestCase):
 
 class CommentFormTests(TestCase):
     def test_valid_comment_form(self):
-        form = CommentForm(
-            data={"name": "Reader", "email": "reader@example.com", "body": "A thoughtful comment."}
-        )
+        form = CommentForm(data={"body": "A thoughtful comment."})
 
         self.assertTrue(form.is_valid())
 
-    def test_comment_form_requires_valid_email(self):
-        form = CommentForm(data={"name": "Reader", "email": "not-email", "body": "A thoughtful comment."})
+    def test_comment_form_requires_body(self):
+        form = CommentForm(data={"body": ""})
 
         self.assertFalse(form.is_valid())
-        self.assertIn("email", form.errors)
+        self.assertIn("body", form.errors)

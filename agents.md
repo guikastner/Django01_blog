@@ -252,3 +252,8 @@ Dependencias de infraestrutura provaveis:
 - O container de testes fica como servico `test` no `docker-compose.yml`; ele reutiliza a imagem Django, desliga migrations/superuser no entrypoint e executa `python manage.py test` com SQLite temporario.
 - Areas publicas de leitura, comentarios e eventuais colunas devem usar a mesma largura maxima da topbar (`1180px`) para manter alinhamento visual entre navegacao e conteudo.
 - Uploads de midia do editor publico e do editor no Django admin devem validar o conteudo real com Pillow antes de salvar, rejeitando bytes que nao sejam imagem valida e arquivos cujo formato real nao corresponda ao `content_type` declarado.
+- Comentarios publicos agora exigem usuario autenticado; anonimos devem ser direcionados para login/cadastro antes de comentar.
+- O cadastro publico exige nome e sobrenome alem de username, email unico e senha.
+- O app `accounts` mantem `UserProfile` ligado ao `User` nativo por `OneToOneField` para regras de participacao, incluindo bloqueio de comentarios sem criar custom user model.
+- Novos comentarios ficam ligados ao usuario autenticado por `Comment.user`, mas continuam salvando `name` e `email` como snapshot historico para preservar comentarios existentes e exibicao publica.
+- A aba `/dashboard/users/` monitora usuarios registrados, permite filtros por username e email, mostra contagens de comentarios e usa permissoes nativas `accounts.view_userprofile` e `accounts.change_userprofile` para visualizar e banir/restaurar comentarios.
