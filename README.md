@@ -9,7 +9,7 @@ A small Django blog project with PostgreSQL, MinIO-compatible media storage, a s
 - Permission-protected public post creation and editing screens, separate from Django admin.
 - Custom editorial dashboard for authenticated users with native Django permissions. It lists every post, links to edit/delete actions, manages categories, and moderates comments.
 - Dashboard user monitoring with username/email filters, comment counts, and comment ban controls.
-- Post categories with a many-to-many relationship to posts.
+- Post categories with a many-to-many relationship to posts and public category archive pages.
 - Public login page using Django's native authentication views.
 - Public registration page with a custom signup form, required first and last name, and automatic login after account creation.
 - Comment form on post detail pages for registered users only.

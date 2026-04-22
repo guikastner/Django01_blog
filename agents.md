@@ -249,6 +249,7 @@ Dependencias de infraestrutura provaveis:
 - A interface administrativa customizada fica em `/dashboard/` e usa class-based views/templates proprios do app `blog`, mantendo o Django admin nativo disponivel para operacoes avancadas.
 - O dashboard customizado usa permissoes nativas do Django: `blog.view_post` para listar todos os posts, `blog.change_post` para editar, `blog.delete_post` para excluir, `blog.add_category` para criar categorias, `comments.change_comment` para aprovar/reprovar comentarios e `comments.delete_comment` para excluir comentarios.
 - Categorias ficam no app `blog` como modelo `Category`, ligadas a `Post` por `ManyToManyField`, com slug unico e administracao tambem registrada no Django admin.
+- A navegacao publica por categorias usa URLs em `/categories/<slug>/`, exibindo apenas posts publicados e listando no sidebar apenas categorias vinculadas a posts publicos.
 - O container de testes fica como servico `test` no `docker-compose.yml`; ele reutiliza a imagem Django, desliga migrations/superuser no entrypoint e executa `python manage.py test` com SQLite temporario.
 - Areas publicas de leitura, comentarios e eventuais colunas devem usar a mesma largura maxima da topbar (`1180px`) para manter alinhamento visual entre navegacao e conteudo.
 - Uploads de midia do editor publico e do editor no Django admin devem validar o conteudo real com Pillow antes de salvar, rejeitando bytes que nao sejam imagem valida e arquivos cujo formato real nao corresponda ao `content_type` declarado.

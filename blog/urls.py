@@ -18,6 +18,7 @@ app_name = "blog"
 
 urlpatterns = [
     path("", PostListView.as_view(), name="post_list"),
+    path("categories/<slug:category_slug>/", PostListView.as_view(), name="category_post_list"),
     path("dashboard/", DashboardPostListView.as_view(), name="dashboard_posts"),
     path("dashboard/categories/", DashboardCategoryView.as_view(), name="dashboard_categories"),
     path("dashboard/comments/", DashboardCommentModerationView.as_view(), name="dashboard_comments"),
