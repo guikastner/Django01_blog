@@ -250,3 +250,4 @@ Dependencias de infraestrutura provaveis:
 - O dashboard customizado usa permissoes nativas do Django: `blog.view_post` para listar todos os posts, `blog.change_post` para editar, `blog.delete_post` para excluir, `blog.add_category` para criar categorias, `comments.change_comment` para aprovar/reprovar comentarios e `comments.delete_comment` para excluir comentarios.
 - Categorias ficam no app `blog` como modelo `Category`, ligadas a `Post` por `ManyToManyField`, com slug unico e administracao tambem registrada no Django admin.
 - O container de testes fica como servico `test` no `docker-compose.yml`; ele reutiliza a imagem Django, desliga migrations/superuser no entrypoint e executa `python manage.py test` com SQLite temporario.
+- Areas publicas de leitura, comentarios e eventuais colunas devem usar a mesma largura maxima da topbar (`1180px`) para manter alinhamento visual entre navegacao e conteudo.
