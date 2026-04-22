@@ -16,9 +16,9 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ("title", "author", "status", "published_at", "created_at")
+    list_display = ("title", "author", "status", "category_names", "published_at", "created_at")
     list_filter = ("status", "categories", "created_at", "published_at")
-    search_fields = ("title", "excerpt", "content")
+    search_fields = ("title", "excerpt", "content", "categories__name")
     prepopulated_fields = {"slug": ("title",)}
     readonly_fields = ("created_at", "updated_at")
     date_hierarchy = "published_at"
@@ -44,6 +44,10 @@ class PostAdmin(admin.ModelAdmin):
         if obj is None or not obj.is_public():
             return None
         return super().get_view_on_site_url(obj)
+
+    @admin.display(description="Categories")
+    def category_names(self, obj):
+        return ", ".join(category.name for category in obj.categories.all())
 
     def upload_content_image(self, request):
         if request.method != "POST":

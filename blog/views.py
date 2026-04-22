@@ -6,6 +6,7 @@ from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView, View
 
 from comments.forms import CommentForm
@@ -17,6 +18,17 @@ from .media import save_editor_image, validate_editor_image
 from .models import Category, Post
 
 
+def public_categories():
+    return (
+        Category.objects.filter(
+            posts__status=Post.Status.PUBLISHED,
+            posts__published_at__lte=timezone.now(),
+        )
+        .distinct()
+        .order_by("name")
+    )
+
+
 class PostListView(ListView):
     model = Post
     template_name = "blog/post_list.html"
@@ -24,7 +36,19 @@ class PostListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Post.published.select_related("author")
+        queryset = Post.published.select_related("author").prefetch_related("categories")
+        self.category = None
+        category_slug = self.kwargs.get("category_slug")
+        if category_slug:
+            self.category = get_object_or_404(Category, slug=category_slug)
+            queryset = queryset.filter(categories=self.category).distinct()
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["categories"] = public_categories()
+        context["current_category"] = self.category
+        return context
 
 
 class PostDetailView(DetailView):
@@ -35,12 +59,13 @@ class PostDetailView(DetailView):
     slug_url_kwarg = "slug"
 
     def get_queryset(self):
-        return Post.published.select_related("author").prefetch_related("comments")
+        return Post.published.select_related("author").prefetch_related("categories", "comments")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["comment_form"] = CommentForm()
         context["approved_comments"] = self.object.comments.filter(is_approved=True)
+        context["categories"] = public_categories()
         if self.request.user.is_authenticated:
             context["comment_profile"] = UserProfile.for_user(self.request.user)
         return context

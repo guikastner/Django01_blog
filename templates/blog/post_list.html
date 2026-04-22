@@ -1,12 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Posts - Django Blog{% endblock %}
+{% block title %}{% if current_category %}{{ current_category.name }} - Django Blog{% else %}Posts - Django Blog{% endif %}{% endblock %}
 
 {% block content %}
   <section class="mx-auto max-w-[1180px] rounded-[2rem] border border-line bg-white/90 p-6 shadow-[0_20px_60px_rgba(10,53,116,0.10)] backdrop-blur sm:p-10">
-    <p class="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-deep">Django Blog</p>
-    <h1 class="max-w-[15ch] font-serif text-[clamp(2.75rem,8vw,5.5rem)] font-semibold leading-[0.98] text-ink">Articles, notes, and implementation journals.</h1>
-    <p class="mt-6 max-w-[62ch] text-lg leading-8 text-muted">A focused blog layout for published posts. The interface keeps the visual personality from the reference site, but gives priority to reading, chronology, and article discovery.</p>
+    <p class="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-deep">{% if current_category %}Category{% else %}Django Blog{% endif %}</p>
+    <h1 class="max-w-[15ch] font-serif text-[clamp(2.75rem,8vw,5.5rem)] font-semibold leading-[0.98] text-ink">
+      {% if current_category %}{{ current_category.name }}{% else %}Articles, notes, and implementation journals.{% endif %}
+    </h1>
+    <p class="mt-6 max-w-[62ch] text-lg leading-8 text-muted">
+      {% if current_category and current_category.description %}
+        {{ current_category.description }}
+      {% elif current_category %}
+        Published posts filed under {{ current_category.name }}.
+      {% else %}
+        A focused blog layout for published posts. The interface keeps the visual personality from the reference site, but gives priority to reading, chronology, and article discovery.
+      {% endif %}
+    </p>
   </section>
 
   <div class="mx-auto mt-10 grid max-w-[1180px] gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
@@ -14,8 +24,11 @@
       <div class="mb-5 flex items-end justify-between gap-4 border-b border-line pb-4">
         <div>
           <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">Latest posts</p>
-          <h2 id="latest-posts-title" class="mt-2 text-2xl font-bold text-ink">Recent writing</h2>
+          <h2 id="latest-posts-title" class="mt-2 text-2xl font-bold text-ink">{% if current_category %}Posts in {{ current_category.name }}{% else %}Recent writing{% endif %}</h2>
         </div>
+        {% if current_category %}
+          <a href="{% url 'blog:post_list' %}" class="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-5 text-sm font-bold text-accent transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">All posts</a>
+        {% endif %}
       </div>
 
       <div class="space-y-6">
@@ -36,6 +49,13 @@
                   <span aria-hidden="true">/</span>
                   {{ post.author.get_full_name|default:post.author.username }}
                 </p>
+                {% if post.categories.all %}
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    {% for category in post.categories.all %}
+                      <a href="{{ category.get_absolute_url }}" class="inline-flex min-h-9 items-center rounded-full border border-line bg-paper px-3 text-xs font-bold uppercase tracking-[0.12em] text-deep transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25">{{ category.name }}</a>
+                    {% endfor %}
+                  </div>
+                {% endif %}
                 <h3 class="mt-2 text-3xl font-bold leading-tight text-ink">
                   <a href="{{ post.get_absolute_url }}" class="outline-none transition hover:text-brand focus-visible:rounded-md focus-visible:ring-4 focus-visible:ring-brand/25">
                     {{ post.title }}
@@ -73,9 +93,16 @@
     </section>
 
     <aside class="rounded-[1.75rem] border border-line bg-white/80 p-5 shadow-[0_16px_45px_rgba(10,53,116,0.08)] backdrop-blur lg:sticky lg:top-28">
-      <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">Archive</p>
-      <h2 class="mt-3 text-xl font-bold leading-tight text-ink">Published posts only.</h2>
-      <p class="mt-3 text-sm leading-6 text-muted">Only public entries appear in the feed. Posts are ordered by publication date for a familiar blog reading flow.</p>
+      <p class="text-xs font-bold uppercase tracking-[0.16em] text-deep">Categories</p>
+      <h2 class="mt-3 text-xl font-bold leading-tight text-ink">Browse by topic.</h2>
+      <div class="mt-5 flex flex-col gap-2">
+        <a href="{% url 'blog:post_list' %}" class="inline-flex min-h-11 items-center rounded-full border border-line px-4 text-sm font-bold transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25 {% if not current_category %}bg-accent text-white hover:text-white{% else %}bg-white/80 text-accent{% endif %}">All posts</a>
+        {% for category in categories %}
+          <a href="{{ category.get_absolute_url }}" class="inline-flex min-h-11 items-center rounded-full border border-line px-4 text-sm font-bold transition hover:border-brand/30 hover:text-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/25 {% if current_category == category %}bg-accent text-white hover:text-white{% else %}bg-white/80 text-accent{% endif %}">{{ category.name }}</a>
+        {% empty %}
+          <p class="text-sm leading-6 text-muted">Categories appear here after they are assigned to published posts.</p>
+        {% endfor %}
+      </div>
     </aside>
   </div>
 {% endblock %}

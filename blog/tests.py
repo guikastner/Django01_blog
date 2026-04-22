@@ -65,6 +65,11 @@ class CategoryModelTests(TestCase):
 
         self.assertEqual(str(category), "Django")
 
+    def test_get_absolute_url_uses_category_slug(self):
+        category = Category.objects.create(name="Django", slug="django")
+
+        self.assertEqual(category.get_absolute_url(), reverse("blog:category_post_list", kwargs={"category_slug": "django"}))
+
 
 class PostViewTests(TestCase):
     def setUp(self):
@@ -85,11 +90,60 @@ class PostViewTests(TestCase):
         self.assertContains(response, self.published.title)
         self.assertNotContains(response, self.draft.title)
 
+    def test_post_list_shows_public_categories(self):
+        public_category = Category.objects.create(name="Django", slug="django")
+        hidden_category = Category.objects.create(name="Drafts", slug="drafts")
+        self.published.categories.add(public_category)
+        self.draft.categories.add(hidden_category)
+
+        response = self.client.get(reverse("blog:post_list"))
+
+        self.assertContains(response, public_category.name)
+        self.assertContains(response, public_category.get_absolute_url())
+        self.assertNotContains(response, hidden_category.name)
+
+    def test_category_post_list_filters_by_category(self):
+        django = Category.objects.create(name="Django", slug="django")
+        python = Category.objects.create(name="Python", slug="python")
+        other_post = Post.objects.create(
+            title="Python post",
+            slug="python-post",
+            content="<p>Public body</p>",
+            author=self.author,
+            status=Post.Status.PUBLISHED,
+            published_at=timezone.now(),
+        )
+        self.published.categories.add(django)
+        other_post.categories.add(python)
+
+        response = self.client.get(django.get_absolute_url())
+
+        self.assertContains(response, "Posts in Django")
+        self.assertContains(response, self.published.title)
+        self.assertNotContains(response, other_post.title)
+
+    def test_category_post_list_does_not_show_draft_posts(self):
+        category = Category.objects.create(name="Django", slug="django")
+        self.draft.categories.add(category)
+
+        response = self.client.get(category.get_absolute_url())
+
+        self.assertNotContains(response, self.draft.title)
+
     def test_post_detail_shows_published_post(self):
         response = self.client.get(self.published.get_absolute_url())
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.published.title)
+
+    def test_post_detail_links_categories(self):
+        category = Category.objects.create(name="Django", slug="django")
+        self.published.categories.add(category)
+
+        response = self.client.get(self.published.get_absolute_url())
+
+        self.assertContains(response, category.name)
+        self.assertContains(response, category.get_absolute_url())
 
     def test_post_detail_does_not_show_draft(self):
         response = self.client.get(self.draft.get_absolute_url())
