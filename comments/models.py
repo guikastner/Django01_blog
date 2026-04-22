@@ -1,8 +1,16 @@
+from django.conf import settings
 from django.db import models
 
 
 class Comment(models.Model):
     post = models.ForeignKey("blog.Post", on_delete=models.CASCADE, related_name="comments")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="comments",
+    )
     name = models.CharField(max_length=120)
     email = models.EmailField()
     body = models.TextField()

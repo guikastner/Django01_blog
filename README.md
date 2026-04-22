@@ -8,10 +8,11 @@ A small Django blog project with PostgreSQL, MinIO-compatible media storage, a s
 - Public post list and post detail pages.
 - Permission-protected public post creation and editing screens, separate from Django admin.
 - Custom editorial dashboard for authenticated users with native Django permissions. It lists every post, links to edit/delete actions, manages categories, and moderates comments.
+- Dashboard user monitoring with username/email filters, comment counts, and comment ban controls.
 - Post categories with a many-to-many relationship to posts.
 - Public login page using Django's native authentication views.
-- Public registration page with a custom signup form and automatic login after account creation.
-- Public comment form on post detail pages.
+- Public registration page with a custom signup form, required first and last name, and automatic login after account creation.
+- Comment form on post detail pages for registered users only.
 - Comments are stored unapproved by default and can be moderated in the custom dashboard or Django admin.
 - SQLite for local development and PostgreSQL configuration for production through environment variables.
 - Optional S3-compatible media storage for MinIO through `django-storages`.
@@ -118,6 +119,8 @@ blog.delete_post      delete posts
 blog.add_category     add categories
 comments.change_comment approve or reject comments
 comments.delete_comment delete comments
+accounts.view_userprofile view registered users in the dashboard
+accounts.change_userprofile ban or allow users to submit comments
 ```
 
 Users without the required permission receive a forbidden response even when logged in. Superusers have access to all dashboard sections.
@@ -138,7 +141,9 @@ The media upload endpoint uses the same type and size validation configured for 
 
 Django's built-in authentication URLs are mounted under `/accounts/`. The public login screen is available at `/accounts/login/`, uses `templates/registration/login.html`, and redirects authenticated users back to the post list by default.
 
-Custom registration lives in the `accounts` app without adding a custom user model. The signup screen is available at `/accounts/signup/`, uses `templates/registration/signup.html`, requires a unique email address, creates the user through Django's native `UserCreationForm`, and logs the new user in after a successful signup.
+Custom registration lives in the `accounts` app without adding a custom user model. The signup screen is available at `/accounts/signup/`, uses `templates/registration/signup.html`, requires first name, last name, and a unique email address, creates the user through Django's native `UserCreationForm`, and logs the new user in after a successful signup.
+
+Registered users can submit comments unless their account profile is banned from commenting. The dashboard users tab at `/dashboard/users/` lets authorized staff filter by username or email, review comment counts, and ban or restore commenting for a user. Existing comments keep their stored display name and email snapshot, while new comments are linked to the authenticated user.
 
 ## Tests
 

@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.http import JsonResponse
@@ -9,6 +10,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 
 from comments.forms import CommentForm
 from comments.models import Comment
+from accounts.models import UserProfile
 
 from .forms import CategoryForm, PostForm
 from .media import save_editor_image, validate_editor_image
@@ -39,14 +41,27 @@ class PostDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context["comment_form"] = CommentForm()
         context["approved_comments"] = self.object.comments.filter(is_approved=True)
+        if self.request.user.is_authenticated:
+            context["comment_profile"] = UserProfile.for_user(self.request.user)
         return context
 
     def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+
         self.object = self.get_object()
+        profile = UserProfile.for_user(request.user)
+        if profile.is_comment_banned:
+            messages.error(request, "Your account is not allowed to submit comments.")
+            return redirect(self.object.get_absolute_url())
+
         form = CommentForm(request.POST)
         if form.is_valid():
             comment = form.save(commit=False)
             comment.post = self.object
+            comment.user = request.user
+            comment.name = request.user.get_full_name() or request.user.username
+            comment.email = request.user.email
             comment.save()
             messages.success(request, "Your comment was submitted and is awaiting approval.")
             return redirect(self.object.get_absolute_url())
@@ -235,5 +250,48 @@ class DashboardCommentModerationView(LoginRequiredMixin, PermissionRequiredMixin
             messages.success(request, "Comment deleted.")
         else:
             messages.error(request, "Unknown moderation action.")
+
+        return redirect(request.get_full_path())
+
+
+class DashboardUserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = UserProfile
+    template_name = "blog/dashboard/users.html"
+    context_object_name = "profiles"
+    permission_required = "accounts.view_userprofile"
+    paginate_by = 25
+
+    def get_queryset(self):
+        queryset = (
+            UserProfile.objects.select_related("user", "comment_banned_by")
+            .annotate(
+                total_comments=Count("user__comments", distinct=True),
+                approved_comments=Count("user__comments", filter=Q(user__comments__is_approved=True), distinct=True),
+            )
+            .order_by("user__username")
+        )
+        username = self.request.GET.get("username", "").strip()
+        email = self.request.GET.get("email", "").strip()
+        if username:
+            queryset = queryset.filter(user__username__icontains=username)
+        if email:
+            queryset = queryset.filter(user__email__icontains=email)
+        return queryset
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.has_perm("accounts.change_userprofile"):
+            raise PermissionDenied
+
+        profile = get_object_or_404(UserProfile.objects.select_related("user"), pk=request.POST.get("profile_id"))
+        action = request.POST.get("action")
+
+        if action == "ban_comments":
+            profile.ban_from_comments(request.user, request.POST.get("comment_ban_reason", ""))
+            messages.success(request, f"{profile.user.username} can no longer submit comments.")
+        elif action == "allow_comments":
+            profile.allow_comments()
+            messages.success(request, f"{profile.user.username} can submit comments again.")
+        else:
+            messages.error(request, "Unknown user action.")
 
         return redirect(request.get_full_path())

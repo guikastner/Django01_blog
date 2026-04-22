@@ -15,8 +15,8 @@ def reject_comments(modeladmin, request, queryset):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ("name", "post", "is_approved", "created_at")
+    list_display = ("name", "user", "post", "is_approved", "created_at")
     list_filter = ("is_approved", "post", "created_at")
-    search_fields = ("name", "email", "body", "post__title")
+    search_fields = ("name", "email", "user__username", "user__email", "body", "post__title")
     readonly_fields = ("created_at", "updated_at")
     actions = [approve_comments, reject_comments]
