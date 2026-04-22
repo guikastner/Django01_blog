@@ -16,6 +16,14 @@ from .models import Category, Post
 from .admin import PostAdmin
 
 
+ONE_PIXEL_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+    b"\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4"
+    b"\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05"
+    b"\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
 class PostModelTests(TestCase):
     def setUp(self):
         self.author = get_user_model().objects.create_user(username="editor", password="password")
@@ -268,12 +276,7 @@ class PostEditorViewTests(TestCase):
         with override_settings(MEDIA_ROOT=media_root):
             image = SimpleUploadedFile(
                 "pasted.png",
-                (
-                    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
-                    b"\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4"
-                    b"\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05"
-                    b"\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
-                ),
+                ONE_PIXEL_PNG,
                 content_type="image/png",
             )
 
@@ -281,6 +284,28 @@ class PostEditorViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("/media/posts/content/", response.json()["url"])
+
+    def test_content_upload_rejects_spoofed_image_content(self):
+        user = get_user_model().objects.create_user(username="spoofed-uploader", password="password")
+        self.add_permission(user, "change_post")
+        self.client.force_login(user)
+        image = SimpleUploadedFile("pasted.png", b"not-a-real-image", content_type="image/png")
+
+        response = self.client.post(reverse("blog:post_content_upload"), {"image": image})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "Uploaded file is not a valid JPEG, PNG, or WebP image.")
+
+    def test_content_upload_rejects_declared_type_mismatch(self):
+        user = get_user_model().objects.create_user(username="mismatch-uploader", password="password")
+        self.add_permission(user, "change_post")
+        self.client.force_login(user)
+        image = SimpleUploadedFile("pasted.jpg", ONE_PIXEL_PNG, content_type="image/jpeg")
+
+        response = self.client.post(reverse("blog:post_content_upload"), {"image": image})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "Uploaded image content does not match its declared type.")
 
 
 class DashboardViewTests(TestCase):
@@ -487,12 +512,7 @@ class PostAdminImageUploadTests(TestCase):
         with override_settings(MEDIA_ROOT=self.media_root):
             image = SimpleUploadedFile(
                 "pasted.png",
-                (
-                    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
-                    b"\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4"
-                    b"\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05"
-                    b"\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
-                ),
+                ONE_PIXEL_PNG,
                 content_type="image/png",
             )
 
@@ -500,3 +520,11 @@ class PostAdminImageUploadTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("/media/posts/content/", response.json()["url"])
+
+    def test_admin_content_image_upload_rejects_spoofed_content(self):
+        image = SimpleUploadedFile("pasted.png", b"not-a-real-image", content_type="image/png")
+
+        response = self.client.post(reverse("admin:blog_post_upload_content_image"), {"image": image})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "Uploaded file is not a valid JPEG, PNG, or WebP image.")
